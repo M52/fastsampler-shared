@@ -161,15 +161,12 @@ Rebuild:
 
 ## Open details
 
-1. Scope of this repository. AGENTS.md does not allow DSP processing here, and
-   the steps are DSP. The scope must widen, possibly under a new repository
-   name, before the step code can move in.
-2. The fingerprint definition: byte layout, channel order and hash algorithm.
+1. The fingerprint definition: byte layout, channel order and hash algorithm.
    Like a step name, it cannot change after release.
-3. Capacities of the new nanopb arrays: source files per `.fsi` and steps per
+2. Capacities of the new nanopb arrays: source files per `.fsi` and steps per
    stored sample.
-4. Names of the bit reduction methods. fsbanktool truncates 24-bit samples to
+3. Names of the bit reduction methods. fsbanktool truncates 24-bit samples to
    16 bits. The FastSampler export needs its own method name if it converts
    differently.
-5. Whether FastSampler generates FSP peak caches and SMFP fingerprints again
+4. Whether FastSampler generates FSP peak caches and SMFP fingerprints again
    for a rebuilt bank, because those files are not published either.
