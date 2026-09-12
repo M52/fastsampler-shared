@@ -4,4 +4,5 @@
 #include "fastsampler_format_limits.h"
 #include "fastsampler_effect_format.h"
 #include "fastsampler_pan_format.h"
-#define FASTSAMPLER_FORMATS_RELEASE "1.0.0"
+#include "fastsampler_source_format.h"
+#define FASTSAMPLER_FORMATS_RELEASE "1.1.0"

@@ -5,7 +5,8 @@ published. A `.fsi` holds no audio. This design lets an author publish an
 edited `.fsi`, and lets anyone who owns the same `.gig` files rebuild its
 `.fsb` with fsbanktool.
 
-Status: design only. Nothing here is implemented.
+Status: in progress. The records, the steps and their tests are in this
+repository from release 1.1.0. Support in fsbanktool and FastSampler follows.
 
 ## Example
 
@@ -25,38 +26,53 @@ The `.fsi` gains optional records that say where each stored sample comes from
 and how its audio was made. They mirror the FSB v2 sample table without the
 audio.
 
-Per instrument:
+Per instrument, in `FSIFile`:
 
-- The sample rate and channel count of the bank. Every frame position in the
-  `.fsi` counts in bank frames.
-- A list of source files. An entry holds the file name, the name of its parent
-  folder, and the size and hash of the `.gig` and of each extension file it
-  uses. No entry holds a full path.
+- `bank_sample_rate` and `bank_channels`: the format of the bank. Every frame
+  position in the `.fsi` counts in bank frames.
+- `source_files`, up to 256: the file name, the name of its parent folder, and
+  the size and hash of each `.gig` and of each extension file it uses. An
+  extension file names its `.gig` in `extension_of`. No entry holds a full
+  path.
+- `source_samples`, up to 4096 stored samples.
 
-Per stored sample:
+Per stored sample, in `FSISourceSample`:
 
-- The source file entry and the number of the sample inside that `.gig`.
-- The source fingerprint.
-- The steps, in order.
-- The result fingerprint.
+- `file` and `sample`: the zero-based source file entry, and the zero-based
+  number of the sample inside that `.gig`.
+- `source_fingerprint`.
+- `steps`, up to 8, in order.
+- `bits` and `frames`: the depth and length of the result.
+- `result_fingerprint`.
 
-Per zone:
+Per zone, in `FSIZone`:
 
-- The stored sample it plays.
-- The first frame and the frame count of its window in the result, as in an
-  FSB row.
+- `source_sample`: the one-based stored sample that the zone plays. Zero or
+  absent means that the zone has no source.
+- `source_first` and `source_frames`: the window of the zone in the result, as
+  in an FSB row.
 
 Several zones can share one stored sample, so the records sit on stored samples
 and zones point at them.
 
 ## Steps
 
-| Step | Parameters | Added by |
-| --- | --- | --- |
-| To stereo | None | fsbanktool conversion |
-| Resample | Target rate, resampler name | fsbanktool conversion (windowed sinc), FastSampler export (cubic) |
-| Reduce to 16 bits | Method name | fsbanktool conversion, FastSampler export set to 16 bits |
-| Cut | First frame, frame count | FastSampler export |
+`fastsampler_source_format.h` holds the step IDs, and `fastsampler_source.h`
+declares the code that applies them.
+
+| ID | Step | Parameters | Added by |
+| --- | --- | --- | --- |
+| 1 | Channels | `channels` | fsbanktool conversion |
+| 2 | Depth, rounded half up | `bits` | fsbanktool conversion |
+| 3 | Resample, windowed sinc | `rate`, `bits` | fsbanktool conversion |
+| 4 | Resample, cubic | `rate`, `bits` | FastSampler export |
+| 5 | Depth from float, rounded half to even | `bits` | FastSampler export |
+| 6 | Cut | `first`, `frames` | FastSampler export |
+
+fsbanktool rounds resampled audio straight to the bank depth, so a resample
+step carries its output depth and needs no depth step after it. The two depth
+steps round differently, and each program has its own. Storing 16-bit audio in
+a 24-bit bank loses nothing and is not a step.
 
 FastSampler's export stores each sample from the first frame that one of its
 zones uses to the last. With "Trim samples" on, a zone uses its in to out
@@ -70,25 +86,32 @@ input. Cutting first and resampling second therefore gives other frame counts
 and other audio. That order occurs when an author exports with trimming, loads
 that `.fsi` and exports it again at another rate.
 
-A step name identifies one exact behaviour, including how it computes frame
+A step ID identifies one exact behaviour, including how it computes frame
 counts, for as long as published `.fsi` files exist. A changed algorithm gets a
-new name, and the old one stays available.
+new ID, and the old one stays available.
 
 The step code lives in this repository. FastSampler and fsbanktool call it and
-keep no copies. Tests pin the output of each step with a fixed input and an
-expected fingerprint, so a change that alters a step fails the tests. Consumers
-compile the step code with the floating-point settings in CONSUMERS.md, so
-both programs produce bit-identical audio.
+keep no copies. The tests compare each step with a copy of the code it came
+from, and pin its output with a fixed input and an expected fingerprint, so a
+change that alters a step fails the tests. Consumers compile the step code with
+the floating-point settings in CONSUMERS.md, so both programs produce
+bit-identical audio.
 
 ## Fingerprints
+
+A fingerprint is XXH64 with seed 0 over interleaved sample values. Each value
+is written as the four little-endian bytes of a 32-bit integer at the depth of
+the audio. The decoder gives 8-bit samples at the 16-bit scale.
 
 The source fingerprint covers the decoded frames of the `.gig` sample at its
 own bit depth and channel count, before any step. An edition that stores the
 same audio compressed gives the same fingerprint.
 
-The result fingerprint covers the audio after the last step and does not depend
-on the bit depth the bank stores. A rebuild can store the audio at more bits
-than the steps produce, but not at fewer.
+The result fingerprint covers the audio after the last step, at the depth in
+`bits`. It does not depend on the bit depth the bank stores. A rebuild can
+store the audio at more bits than the steps produce, but not at fewer.
+
+A file hash is XXH64 with seed 0 over the bytes of the file.
 
 A 64-bit non-cryptographic hash is enough. The fingerprints catch mistakes,
 such as a different file with the same name. They do not protect against
@@ -111,12 +134,16 @@ needs, fsbanktool pads it with silence and gives a stronger warning.
 
 ## FastSampler
 
-- A zone in memory carries its source, steps and window. "Transfer all to
-  working instrument" copies zones whole and needs no change. Undo snapshots
-  copy zone fields one at a time and need the new fields.
-- Loading and saving a `.fsi` reads and writes the records.
-- The export adds the resample and cut steps it applies, and computes the
-  result fingerprints from the audio it stores.
+- The records of a stored sample stay with the sample table entry that holds
+  its audio, because zones already point at that entry. The source files are
+  kept per instrument.
+- "Transfer all to working instrument" copies the records with the entries and
+  merges the source files. Unlocking an instrument replaces its entries and
+  carries the records over.
+- Loading and saving a `.fsi` reads and writes the records. A record whose
+  window does not match the bank is dropped on load.
+- The export adds the resample, depth and cut steps it applies, and computes
+  the result fingerprints from the audio it stores.
 - The export dialog shows "Shareable", or "Not shareable" with the number of
   zones that have no source and the collections they are in. An "Include
   source records" checkbox is on by default, because records cannot be added
@@ -128,8 +155,10 @@ needs, fsbanktool pads it with silence and gives a stronger warning.
 
 Conversion:
 
-- Writes the records. Each window covers the whole sample, and the steps are
-  the ones the conversion applied.
+- Makes each bank sample by replaying the shared steps, so that conversion and
+  rebuild run the same code, and writes the records. Each window covers the
+  whole sample.
+- Switches FMA3 off at start, as CONSUMERS.md requires.
 - Offers an option to store every instrument in stereo. FastSampler does not
   export an instrument whose zones have different channel counts, so layers
   from a mono `.gig` and a stereo `.gig` need it to share one instrument.
@@ -161,12 +190,5 @@ Rebuild:
 
 ## Open details
 
-1. The fingerprint definition: byte layout, channel order and hash algorithm.
-   Like a step name, it cannot change after release.
-2. Capacities of the new nanopb arrays: source files per `.fsi` and steps per
-   stored sample.
-3. Names of the bit reduction methods. fsbanktool truncates 24-bit samples to
-   16 bits. The FastSampler export needs its own method name if it converts
-   differently.
-4. Whether FastSampler generates FSP peak caches and SMFP fingerprints again
+1. Whether FastSampler generates FSP peak caches and SMFP fingerprints again
    for a rebuilt bank, because those files are not published either.

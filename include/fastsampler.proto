@@ -38,6 +38,21 @@ message FSIFile {
     // path.
     // =============================================================================
     optional uint32 mixer_revision = 14;
+
+    // =============================================================================
+    // Where each stored sample comes from and how its audio was made, so that
+    // the bank can be rebuilt from the source files. A file without these
+    // records cannot be rebuilt. See SHAREABLE-INSTRUMENTS.md.
+    // =============================================================================
+    repeated FSISourceFile source_files = 15;
+    repeated FSISourceSample source_samples = 16;
+
+    // =============================================================================
+    // The sample rate and channel count of the bank that the source records
+    // make.
+    // =============================================================================
+    optional uint32 bank_sample_rate = 17;
+    optional uint32 bank_channels = 18;
 }
 
 message FSIBusInsert {
@@ -151,6 +166,14 @@ message FSIZone {
     // =============================================================================
     optional uint32 arrivalframe = 30;
     optional uint32 departureframe = 31;
+    // =============================================================================
+    // The one-based index of the source sample this zone plays. Absent or zero
+    // means the zone has no source. The window is the part of that sample's
+    // result that the zone plays, as in its bank row.
+    // =============================================================================
+    optional uint32 source_sample = 32;
+    optional uint32 source_first = 33;
+    optional uint32 source_frames = 34;
 }
 
 message FSIInstrumentFX {
@@ -290,6 +313,55 @@ message FSICollectionLink {
     optional int32 cc_low = 12;
     optional int32 cc_high = 13;
     optional uint32 rule = 14;
+}
+
+// =============================================================================
+// A source file of stored samples. The file name and the name of the folder
+// that holds it help a user find the file. No path is stored. The size and
+// hash identify an exact copy, but they do not decide whether a sample
+// matches.
+// =============================================================================
+message FSISourceFile {
+    optional string name = 1;
+    optional string folder = 2;
+    optional uint64 size = 3;
+    optional fixed64 hash = 4;
+    // =============================================================================
+    // The one-based index of the main file that this extension file belongs
+    // to. Absent or zero means a main file.
+    // =============================================================================
+    optional uint32 extension_of = 5;
+}
+
+// =============================================================================
+// One processing step. Each step type uses only some of the parameters. See
+// fastsampler_source_format.h.
+// =============================================================================
+message FSISourceStep {
+    optional uint32 type = 1;
+    optional uint32 rate = 2;
+    optional uint32 channels = 3;
+    optional uint32 bits = 4;
+    optional uint32 first = 5;
+    optional uint32 frames = 6;
+}
+
+// =============================================================================
+// A stored sample: the sample in a source file, the steps that make the stored
+// audio from it, and fingerprints of both. The file is a zero-based index into
+// source_files, and the sample is the zero-based position of the sample in
+// that file. The source fingerprint covers the decoded source audio. The
+// result fingerprint covers the audio after the last step, at the result
+// depth.
+// =============================================================================
+message FSISourceSample {
+    optional uint32 file = 1;
+    optional uint32 sample = 2;
+    optional fixed64 source_fingerprint = 3;
+    repeated FSISourceStep steps = 4;
+    optional uint32 bits = 5;
+    optional uint32 frames = 6;
+    optional fixed64 result_fingerprint = 7;
 }
 
 message FSPFile {

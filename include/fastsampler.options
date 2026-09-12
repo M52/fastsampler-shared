@@ -74,6 +74,15 @@ FSIBusInsert.params                 max_count:8
 FSIBus.sends                        max_count:8
 
 # =============================================================================
+# Keep these capacities consistent with fastsampler_source_format.h.
+# =============================================================================
+FSIFile.source_files                max_count:256
+FSIFile.source_samples              max_count:4096
+FSISourceFile.name                  max_size:128
+FSISourceFile.folder                max_size:128
+FSISourceSample.steps               max_count:8
+
+# =============================================================================
 # Use callbacks to avoid a large static array of zone peak data.
 # =============================================================================
 FSPFile.zones                   type:FT_CALLBACK

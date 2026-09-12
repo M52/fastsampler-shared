@@ -42,6 +42,12 @@ PB_BIND(FSICollectionFX, FSICollectionFX, 4)
 
 PB_BIND(FSICollectionLink, FSICollectionLink, AUTO)
 
+PB_BIND(FSISourceFile, FSISourceFile, 2)
+
+PB_BIND(FSISourceStep, FSISourceStep, AUTO)
+
+PB_BIND(FSISourceSample, FSISourceSample, 2)
+
 PB_BIND(FSPFile, FSPFile, AUTO)
 
 PB_BIND(FSPZone, FSPZone, 4)
