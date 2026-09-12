@@ -1,7 +1,8 @@
-# FastSampler formats
+# FastSampler shared code
 
-Shared file-format definitions and serialization code for FastSampler,
-FastResampler and fsbanktool.
+Code shared by FastSampler, FastResampler and fsbanktool: file-format
+definitions, their serialization, and code whose results must be identical in
+more than one of these programs.
 
 | Format | Purpose | Current representation |
 | --- | --- | --- |
@@ -34,8 +35,8 @@ On Windows with Visual Studio C++ Build Tools, run `tests\run-tests.bat`.
 GitHub Actions runs these tests on pushes and pull requests. Consumer integration
 tests remain necessary whenever schemas or their meaning change.
 
-[GitLab](https://git.omkserver.nl/Macaberz/fastsampler-formats) is the upstream
-repository; [GitHub](https://github.com/M52/fastsampler-formats) is the public mirror.
+[GitLab](https://git.omkserver.nl/Macaberz/fastsampler-shared) is the upstream
+repository; [GitHub](https://github.com/M52/fastsampler-shared) is the public mirror.
 From a clean `main` checkout, `scripts/mirror.ps1` pushes the branch and version
 tags to upstream first, then GitHub.
 

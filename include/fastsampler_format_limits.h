@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Matthias
 #pragma once
-// Persisted sizes and IDs. Change them in fastsampler-formats.
+// Persisted sizes and IDs. Change them in fastsampler-shared.
 #define MAX_NAME_LENGTH 64
 #define MOD_CURVE_POINTS 128
 #define ZONE_PEAK_CACHE_POINTS 1024

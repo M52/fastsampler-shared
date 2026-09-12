@@ -1,10 +1,10 @@
 # Shared FastSampler formats
 
-FSI, FSB, FSP and SMFP are maintained in **fastsampler-formats**:
+FSI, FSB, FSP and SMFP are maintained in **fastsampler-shared**:
 
-- Upstream: https://git.omkserver.nl/Macaberz/fastsampler-formats
-- Public mirror: https://github.com/M52/fastsampler-formats
-- Local dependency: `3rdparty/fastsampler-formats` (Git submodule).
+- Upstream: https://git.omkserver.nl/Macaberz/fastsampler-shared
+- Public mirror: https://github.com/M52/fastsampler-shared
+- Local dependency: `3rdparty/fastsampler-shared` (Git submodule).
 
 The parent commit pins an exact format commit. A normal build uses that
 revision and never fetches a moving branch. After cloning or pulling, run:
@@ -14,21 +14,21 @@ git submodule update --init --recursive
 ```
 
 Make schema, file-layout, version, persisted ID, parameter-slot and shared
-serialization changes in the separate format repository. Do not restore local
-copies or edit forwarding headers to change a format. The protobuf schema,
-options, and maintained nanopb bindings must remain consistent.
+serialization changes in the separate fastsampler-shared repository. Do not
+restore local copies or edit forwarding headers to change a format. The
+protobuf schema, options, and maintained nanopb bindings must remain consistent.
 
-To upgrade deliberately, first commit and test the change in fastsampler-formats,
+To upgrade deliberately, first commit and test the change in fastsampler-shared,
 push its commit/tag to the upstream and GitHub mirror, then:
 
 ```text
-git -C 3rdparty/fastsampler-formats fetch origin --tags
-git -C 3rdparty/fastsampler-formats checkout --detach <tested-commit-or-tag>
-git add 3rdparty/fastsampler-formats
+git -C 3rdparty/fastsampler-shared fetch origin --tags
+git -C 3rdparty/fastsampler-shared checkout --detach <tested-commit-or-tag>
+git add 3rdparty/fastsampler-shared
 ```
 
 Rebuild FastSampler, FastResampler and fsbanktool against the same revision.
-Run the format repository tests, FastSampler's full release tests, fsbanktool's
+Run the fastsampler-shared tests, FastSampler's full release tests, fsbanktool's
 conversion/verification tests, and load generated FSI/FSB pairs through the
 FastSampler loader. A successful compile alone does not prove compatibility.
 Commit each parent's submodule update and any required adapter changes together.
