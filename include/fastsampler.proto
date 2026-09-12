@@ -1,0 +1,302 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Matthias
+// =============================================================================
+// File: fastsampler.proto
+// Created on: 2026-06-18
+// Record the instrument and peak cache schemas for the manually maintained
+// nanopb files.
+// =============================================================================
+
+// =============================================================================
+// Keep this schema, fastsampler.options, fastsampler.pb.h, and
+// fastsampler.pb.c consistent.
+// The repository maintains the nanopb files by hand.
+// =============================================================================
+
+syntax = "proto2";
+
+message FSIFile {
+    required string instrument_name = 1;
+    required string fsb_path = 2;
+    repeated FSICollection collections = 3;
+    repeated FSIZone zones = 4;
+    optional FSIInstrumentFX fx = 5;
+    repeated FSIModulator modulators = 6;
+    repeated FSISMFFingerprints smf_fingerprints = 7;
+    repeated FSICollectionFX collection_fx = 8;
+    repeated FSICollectionLink collection_links = 9;
+    repeated FSIBus buses = 10;
+    optional int32 keyswitch_low = 11;
+    optional int32 keyswitch_high = 12;
+    optional int32 keyswitch_current = 13;
+
+    // =============================================================================
+    // The mixer schema this file was written with. Absence means the file
+    // predates the output mixer, and its preliminary bus fields describe
+    // something the mixer does not read; such a file loads with default
+    // routing. This marks the serialization only. It never selects a playback
+    // path.
+    // =============================================================================
+    optional uint32 mixer_revision = 14;
+}
+
+message FSIBusInsert {
+    optional uint32 type = 1;
+    optional bool bypass = 2;
+    // =============================================================================
+    // Insert identities are local to their bus and are not reused.
+    // =============================================================================
+    optional uint32 stable_id = 3;
+    repeated float params = 4;
+}
+
+message FSIBusSend {
+    // =============================================================================
+    // Zero-based aux bus number. Only an output bus carries sends.
+    // =============================================================================
+    optional uint32 dest = 1;
+    optional float level = 2;
+    optional bool pre_fader = 3;
+}
+
+message FSIBus {
+    optional string name = 1;
+    optional float volume = 2;
+    optional float pan = 3;
+    // =============================================================================
+    // Plugin output numbers are one-based.
+    // =============================================================================
+    optional uint32 output = 4;
+
+    // =============================================================================
+    // Inserts process the summed bus, in this order.
+    // =============================================================================
+    repeated FSIBusInsert inserts = 5;
+
+    // =============================================================================
+    // Only the sends that are switched on are stored. An absent send is off.
+    // =============================================================================
+    repeated FSIBusSend sends = 6;
+}
+
+message FSICollection {
+    required string name = 1;
+    required uint32 zone_count = 2;
+    required uint32 modulator_count = 3;
+    required uint32 first_zone_index = 4;
+    optional uint32 flags = 5;
+
+    // =============================================================================
+    // Capture bounds are fractions of each zone's playing region.
+    // Absent bounds select the loop, or 15 to 85 percent when no loop exists.
+    // =============================================================================
+    optional bool  smf_capture_manual = 6;
+    optional float smf_capture_start = 7;
+    optional float smf_capture_end = 8;
+
+    // =============================================================================
+    // Use stable IDs for links. The loader assigns missing IDs in collection
+    // order.
+    // =============================================================================
+    optional uint32 stable_id = 9;
+
+    // =============================================================================
+    // Collection bus indices are zero-based. An absent bus selects the first
+    // main bus.
+    // =============================================================================
+    optional uint32 output_bus = 10;
+
+    // =============================================================================
+    // The stable ID of the collection whose release samples this one holds.
+    // Absent or zero means it holds none.
+    // =============================================================================
+    optional uint32 release_of = 11;
+}
+
+message FSIZone {
+    required string name = 1;
+    required float attack = 2;
+    required float decay = 3;
+    required float sustain = 4;
+    required float release = 5;
+    required uint32 startframe = 6;
+    required uint32 endframe = 7;
+    required uint32 loopstart = 8;
+    required uint32 loopend = 9;
+    required uint32 xfadeframes = 10;
+    required uint32 xfadetype = 11;
+    required float volume = 12;
+    required float pitch = 13;
+    optional bool loop_enabled = 14;
+    optional bool oneshot = 15;
+    optional bool is_release_sample = 16;
+    optional bool ignore_vel_mapping = 17;
+    optional uint32 low_note = 18;
+    optional uint32 high_note = 19;
+    optional uint32 root_note = 20;
+    optional uint32 low_velocity = 21;
+    optional uint32 high_velocity = 22;
+    optional uint32 pitchshift_type = 23;
+    optional bool flip_lr = 24;
+    optional uint32 zoom_start = 25;
+    optional uint32 zoom_end = 26;
+    optional float zoom_v = 27;
+    optional uint32 inframe = 28;
+    optional uint32 outframe = 29;
+    // =============================================================================
+    // The two bounds of a legato move, absolute within the zone. An absent or
+    // zero frame selects the legato time fallback for that end.
+    // Departure is where the move leaves the note it is played from; arrival
+    // is where it has reached the note it goes to.
+    // =============================================================================
+    optional uint32 arrivalframe = 30;
+    optional uint32 departureframe = 31;
+}
+
+message FSIInstrumentFX {
+    optional float vol_env_attack = 1;
+    optional float vol_env_decay = 2;
+    optional float vol_env_hold = 3;
+    optional float vol_env_sustain = 4;
+    optional float vol_env_release = 5;
+    optional float vol_env_attack_curve = 6;
+    optional float vol_env_decay_curve = 7;
+    optional float vol_env_release_curve = 8;
+
+    optional float filt_env_attack = 9;
+    optional float filt_env_decay = 10;
+    optional float filt_env_hold = 11;
+    optional float filt_env_sustain = 12;
+    optional float filt_env_release = 13;
+    optional float filt_env_attack_curve = 14;
+    optional float filt_env_decay_curve = 15;
+    optional float filt_env_release_curve = 16;
+    optional float filt_env_mod_strength = 17;
+
+    repeated float eq_freq = 18;
+    repeated float eq_q = 19;
+    repeated float eq_gain = 20;
+    repeated uint32 eq_shape = 21;
+
+    repeated bool lfo_enabled = 22;
+    repeated int32 lfo_waveform = 23;
+    repeated float lfo_rate = 24;
+    repeated float lfo_depth = 25;
+
+    optional bool lfo_filter_target_low = 26;
+    optional bool lfo_filter_target_mid = 27;
+    optional bool lfo_filter_target_high = 28;
+
+    optional bool vol_env_enabled = 29;
+    optional bool filt_env_enabled = 30;
+    optional bool eq_enabled = 31;
+
+    optional bool ji_enabled = 32;
+    optional float ji_amount = 33;
+    optional float ji_settle_ms = 34;
+    optional int32 ji_root_mode = 35;
+
+    repeated float lfo_curve = 36;
+
+    optional int32 smf_quality = 37;
+
+    // =============================================================================
+    // If the master FX flag is absent, use ji_enabled.
+    // =============================================================================
+    optional bool inst_fx_enabled = 38;
+
+    optional bool seo_enabled = 39;
+    optional bool seo_start_enabled = 40;
+    optional float seo_start_ms = 41;
+    optional bool seo_end_enabled = 42;
+    optional float seo_end_ms = 43;
+}
+
+message FSIModulator {
+    required uint32 type = 1;
+    required uint32 collection_index = 2;
+    optional int32 cc_number = 3;
+    repeated int32 curve_indices = 4;
+    repeated float params = 5;
+    repeated int32 params_i = 6;
+    repeated float curve_data = 7;
+}
+
+// =============================================================================
+// Store target fingerprint paths only. Derive the collection's own fingerprint
+// from its zones at load time.
+// =============================================================================
+message FSISMFFingerprints {
+    required uint32 collection_index = 1;
+    repeated string target_paths = 2;
+    repeated float target_positions = 3;
+}
+
+message FSICollectionFXDriver {
+    required uint32 target_param_idx = 1;
+    required uint32 source_type = 2;
+    optional int32 cc_number = 3;
+    optional float lfo_rate = 4;
+    optional int32 lfo_waveform = 5;
+    optional bool lfo_polyphonic = 6;
+    optional float depth = 7;
+    optional bool use_curve = 8;
+    repeated float curve_data = 9;
+    optional bool expanded = 10;
+    optional int32 vel_source = 11;
+    optional float out_min = 12;
+    optional float out_max = 13;
+    optional bool range_initialized = 14;
+    optional int32 curve_group = 15;
+    // =============================================================================
+    // Note-hold rise and fall times use milliseconds.
+    // =============================================================================
+    optional float hold_rise_ms = 16;
+    optional float hold_fall_ms = 17;
+    // =============================================================================
+    // The note-number range. An absent pair is the whole MIDI range.
+    // =============================================================================
+    optional int32 note_low = 18;
+    optional int32 note_high = 19;
+}
+
+message FSICollectionFX {
+    required uint32 type = 1;
+    required uint32 collection_index = 2;
+    repeated float params = 3;
+    repeated int32 params_i = 4;
+    repeated FSICollectionFXDriver drivers = 5;
+}
+
+// =============================================================================
+// Store links in one flat table using stable IDs for both endpoints.
+// Collection reordering does not change these IDs.
+// =============================================================================
+message FSICollectionLink {
+    required uint32 owner_id = 1;
+    required uint32 target_id = 2;
+    required int32 interval_low = 3;
+    required int32 interval_high = 4;
+    required uint32 owner_fx_type = 5;
+    optional uint32 flags = 6;
+    // =============================================================================
+    // An absent router condition accepts the full MIDI range.
+    // =============================================================================
+    optional int32 ks_low = 7;
+    optional int32 ks_high = 8;
+    optional int32 vel_low = 9;
+    optional int32 vel_high = 10;
+    optional int32 cc_number = 11;
+    optional int32 cc_low = 12;
+    optional int32 cc_high = 13;
+    optional uint32 rule = 14;
+}
+
+message FSPFile {
+    repeated FSPZone zones = 1;
+}
+
+message FSPZone {
+    repeated float min_peaks = 1;
+    repeated float max_peaks = 2;
+}

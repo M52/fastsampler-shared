@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Matthias
+# =============================================================================
+# File: fastsampler.options
+# Created on: 2026-06-18
+# Record nanopb field capacities for the maintained serialization bindings.
+# =============================================================================
+
+FSIFile.instrument_name         max_size:64
+FSIFile.fsb_path                max_size:260
+FSIFile.collections             max_count:128
+# =============================================================================
+# Keep the zone capacity at or above MAX_ZONES. The writer stores one record
+# per zone.
+# =============================================================================
+FSIFile.zones                   max_count:4096
+FSIFile.modulators              max_count:1024
+FSIFile.smf_fingerprints        max_count:128
+
+FSICollection.name              max_size:64
+
+FSIZone.name                    max_size:64
+
+FSIInstrumentFX.eq_freq         max_count:3
+FSIInstrumentFX.eq_q            max_count:3
+FSIInstrumentFX.eq_gain         max_count:3
+FSIInstrumentFX.eq_shape        max_count:3
+FSIInstrumentFX.lfo_enabled     max_count:4
+FSIInstrumentFX.lfo_waveform    max_count:4
+FSIInstrumentFX.lfo_rate        max_count:4
+FSIInstrumentFX.lfo_depth       max_count:4
+FSIInstrumentFX.lfo_curve       max_count:512
+
+FSIModulator.curve_indices      max_count:4
+FSIModulator.params             max_count:16
+FSIModulator.params_i           max_count:8
+FSIModulator.curve_data         max_count:512
+
+# =============================================================================
+# The target count plus the source fingerprint must fit SMF_MAX_KEYFRAMES.
+# Larger capacities can still read files with fewer entries.
+# =============================================================================
+FSISMFFingerprints.target_paths     max_size:260, max_count:12
+FSISMFFingerprints.target_positions max_count:12
+
+FSIFile.collection_links            max_count:1024
+
+FSIFile.collection_fx               max_count:1024
+# =============================================================================
+# Keep this capacity at or above MAX_FX_PARAMS.
+# =============================================================================
+FSICollectionFX.params              max_count:32
+FSICollectionFX.params_i            max_count:8
+FSICollectionFX.drivers             max_count:8
+FSICollectionFXDriver.curve_data    max_count:128
+
+# =============================================================================
+# Keep one entry per instrument bus, as specified by BUS_COUNT.
+# =============================================================================
+FSIFile.buses                       max_count:16
+FSIBus.name                         max_size:64
+
+# =============================================================================
+# Keep these capacities consistent with MAX_BFX_PER_BUS and MAX_BFX_PARAMS.
+# Raising either without raising the count here drops inserts or parameters
+# from every saved instrument.
+# =============================================================================
+FSIBus.inserts                      max_count:8
+FSIBusInsert.params                 max_count:8
+
+# =============================================================================
+# One send per aux destination, as specified by BUS_AUX_COUNT.
+# =============================================================================
+FSIBus.sends                        max_count:8
+
+# =============================================================================
+# Use callbacks to avoid a large static array of zone peak data.
+# =============================================================================
+FSPFile.zones                   type:FT_CALLBACK
+FSPZone.min_peaks               max_count:1024
+FSPZone.max_peaks               max_count:1024
