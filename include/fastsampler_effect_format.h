@@ -32,7 +32,8 @@ enum CollectionFXType {
     COLLECTION_FX_VOLUME_ENVELOPE = 22,
     COLLECTION_FX_PANNER = 23,
     COLLECTION_FX_COMPRESSOR = 24,
-    COLLECTION_FX_SMART_RELEASE = 25
+    COLLECTION_FX_SMART_RELEASE = 25,
+    COLLECTION_FX_SIMULATED_LEGATO = 26
 };
 
 enum CFX_GainParams {
@@ -165,6 +166,89 @@ enum CFX_SmartReleaseParams {
     CFX_SREL_ATTACK_BEND   = 7
 };
 
+// =============================================================================
+// Simulated legato: a connected note is played from the sustain of the note
+// it leaves, with no recorded transition. The family and the profile name the
+// instrument and so the gestures it makes; the style is what the player asks
+// for at the key; the rest scales how far each part of a gesture goes. The
+// enumerated values are stored, so they are numbered here.
+// =============================================================================
+enum CFX_SimulatedLegatoParams {
+    CFX_SIMLEG_FAMILY         = 1,
+    CFX_SIMLEG_PROFILE        = 2,
+    CFX_SIMLEG_STYLE          = 3,
+    CFX_SIMLEG_TIME_MS        = 4,
+    CFX_SIMLEG_SPEED_RESPONSE = 5,
+    CFX_SIMLEG_GAP_MS         = 6,
+    CFX_SIMLEG_ATTACK_DETAIL  = 7,
+    CFX_SIMLEG_PORTAMENTO     = 8,
+    CFX_SIMLEG_COLOUR         = 9,
+    CFX_SIMLEG_EXCITATION     = 10,
+    CFX_SIMLEG_CONTINUITY     = 11,
+    CFX_SIMLEG_NOISE          = 12,
+    CFX_SIMLEG_VIBRATO        = 13,
+    CFX_SIMLEG_RETURN         = 14,
+    CFX_SIMLEG_REPEAT         = 15,
+    CFX_SIMLEG_QUALITY        = 16,
+    CFX_SIMLEG_SAMPLED_POLICY = 17,
+    CFX_SIMLEG_VARIATION      = 18,
+    CFX_SIMLEG_MAX_INTERVAL   = 19
+};
+
+enum SimLegatoFamily {
+    SIMLEG_FAMILY_STRINGS   = 0,
+    SIMLEG_FAMILY_BRASS     = 1,
+    SIMLEG_FAMILY_WOODWINDS = 2
+};
+
+enum SimLegatoStringsProfile {
+    SIMLEG_STRINGS_VIOLIN  = 0,
+    SIMLEG_STRINGS_CELLO   = 1,
+    SIMLEG_STRINGS_SECTION = 2
+};
+
+enum SimLegatoBrassProfile {
+    SIMLEG_BRASS_HORN     = 0,
+    SIMLEG_BRASS_TRUMPET  = 1,
+    SIMLEG_BRASS_TROMBONE = 2,
+    SIMLEG_BRASS_LOW      = 3
+};
+
+enum SimLegatoWoodwindsProfile {
+    SIMLEG_WOODWINDS_FLUTE    = 0,
+    SIMLEG_WOODWINDS_CLARINET = 1,
+    SIMLEG_WOODWINDS_OBOE     = 2,
+    SIMLEG_WOODWINDS_BASSOON  = 3
+};
+
+enum SimLegatoStyle {
+    SIMLEG_STYLE_SLUR         = 0,
+    SIMLEG_STYLE_REARTICULATE = 1,
+    SIMLEG_STYLE_PORTAMENTO   = 2
+};
+
+enum SimLegatoVibrato {
+    SIMLEG_VIBRATO_PRESERVE = 0,
+    SIMLEG_VIBRATO_PHRASE   = 1
+};
+
+enum SimLegatoRepeat {
+    SIMLEG_REPEAT_REARTICULATE = 0,
+    SIMLEG_REPEAT_RETRIGGER    = 1,
+    SIMLEG_REPEAT_HOLD         = 2
+};
+
+enum SimLegatoQuality {
+    SIMLEG_QUALITY_ECONOMY = 0,
+    SIMLEG_QUALITY_NORMAL  = 1,
+    SIMLEG_QUALITY_HIGH    = 2
+};
+
+enum SimLegatoSampledPolicy {
+    SIMLEG_SAMPLED_ALWAYS_SIMULATE = 0,
+    SIMLEG_SAMPLED_FILL_MISSING    = 1
+};
+
 enum CollectionFXDriverSource {
     FX_DRIVER_SOURCE_CC       = 0,
     FX_DRIVER_SOURCE_VELOCITY = 1,
@@ -289,7 +373,7 @@ enum BFX_GainParams {
 
 #define MAX_FX_PARAMS           32
 
-#define COLLECTION_FX_TYPE_COUNT 26
+#define COLLECTION_FX_TYPE_COUNT 27
 
 #define CFX_STRENGTH 0
 
@@ -302,6 +386,16 @@ enum BFX_GainParams {
 #define CFX_COMPRESSOR_PARAM_COUNT (CFX_COMP_SIDECHAIN_HZ + 1)
 
 #define CFX_SMART_RELEASE_PARAM_COUNT (CFX_SREL_ATTACK_BEND + 1)
+
+#define CFX_SIMULATED_LEGATO_PARAM_COUNT (CFX_SIMLEG_MAX_INTERVAL + 1)
+
+#define SIMLEG_FAMILY_COUNT         3
+#define SIMLEG_PROFILES_PER_FAMILY  4
+#define SIMLEG_STYLE_COUNT          3
+#define SIMLEG_VIBRATO_COUNT        2
+#define SIMLEG_REPEAT_COUNT         3
+#define SIMLEG_QUALITY_COUNT        3
+#define SIMLEG_SAMPLED_POLICY_COUNT 2
 
 #define SREL_MAX_MATCH_DB      60.0f
 
