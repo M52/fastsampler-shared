@@ -16,7 +16,8 @@ more than one of these programs.
 `include/` contains schemas, manually maintained nanopb bindings, public
 headers, persisted effect IDs, step IDs, parameter slots and defaults. `src/`
 contains the standalone FSB validation, FSP peak-cache I/O and SMFP I/O
-implementations, and the processing steps and hash of FSI source records.
+implementations, the spectral analysis that SMFP fingerprints are measured
+with, and the processing steps and hash of FSI source records.
 FSI mappings to each application's objects stay in that application.
 
 Add `include` and `3rdparty/nanopb` to your include paths, and define
@@ -24,7 +25,9 @@ Add `include` and `3rdparty/nanopb` to your include paths, and define
 required source files, `include/fastsampler.pb.c`, and the nanopb runtime once.
 A program that records or replays processing steps also compiles
 `src/fastsampler_source.cpp` and `src/fastsampler_hash.cpp`, and follows the
-floating-point rules in [CONSUMERS.md](CONSUMERS.md).
+floating-point rules in [CONSUMERS.md](CONSUMERS.md). A program that writes
+or compares spectral fingerprints also compiles
+`src/fastsampler_smfp_analysis.cpp`.
 
 [SHAREABLE-INSTRUMENTS.md](SHAREABLE-INSTRUMENTS.md) describes the source
 records, which let fsbanktool rebuild the `.fsb` of a published `.fsi` from the

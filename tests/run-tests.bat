@@ -20,10 +20,14 @@ cl %FLAGS% tests\formats_test.cpp src\fastsampler_fsb.cpp src\fastsampler_smfp.c
 if errorlevel 1 exit /b 1
 cl %FLAGS% tests\source_test.cpp src\fastsampler_hash.cpp src\fastsampler_source.cpp %BINDINGS% /Fo"build/" /Fe"build/source_test.exe"
 if errorlevel 1 exit /b 1
+cl %FLAGS% tests\smfp_analysis_test.cpp src\fastsampler_smfp.cpp src\fastsampler_smfp_analysis.cpp /Fo"build/" /Fe"build/smfp_analysis_test.exe"
+if errorlevel 1 exit /b 1
 pushd build
 .\formats_test.exe
 if errorlevel 1 goto failed
 .\source_test.exe
+if errorlevel 1 goto failed
+.\smfp_analysis_test.exe
 if errorlevel 1 goto failed
 popd
 exit /b 0

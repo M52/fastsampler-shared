@@ -64,3 +64,14 @@ the other programs bit for bit:
   give other results.
 - The cubic resampler turns contraction off for Clang with a pragma. Do not
   override it with compiler flags.
+
+## Spectral fingerprint analysis
+
+FastSampler measures the collection that carries a spectral morph filter when
+it loads it, and compares that measurement with the `.smfp` files of the other
+layers. A program that writes or compares fingerprints measures its zones with
+`smfp_resolve_zone_range`, `smfp_root_note_hz` and `smfp_analyze_zone_bands`
+in `fastsampler_smfp_analysis.h`, and keeps no copy of their code. The SMFP
+layout does not change. The filter compares band levels, so measurements need
+not match bit for bit, and the floating-point rules for processing steps do
+not apply.
