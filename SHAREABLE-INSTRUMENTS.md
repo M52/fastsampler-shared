@@ -5,8 +5,10 @@ published. A `.fsi` holds no audio. This design lets an author publish an
 edited `.fsi`, and lets anyone who owns the same `.gig` files rebuild its
 `.fsb` with fsbanktool.
 
-Status: in progress. The records, the steps and their tests are in this
-repository from release 1.1.0. Support in fsbanktool and FastSampler follows.
+Status: implemented. The records, the steps and their tests are in this
+repository from release 1.1.0. fsbanktool writes and verifies the records and
+rebuilds banks from them. FastSampler keeps them through loading, unlocking,
+transfers and exports.
 
 ## Example
 
@@ -134,16 +136,24 @@ needs, fsbanktool pads it with silence and gives a stronger warning.
 
 ## FastSampler
 
-- The records of a stored sample stay with the sample table entry that holds
-  its audio, because zones already point at that entry. The source files are
-  kept per instrument.
+- An unlocked instrument keeps the record of a stored sample with the sample
+  table entry that holds its audio, because zones already point at that entry.
+  The source files are kept per instrument.
+- A loaded instrument keeps the records as the `.fsi` holds them, one per zone,
+  until it is unlocked. A streamed zone does not keep its window in the bank in
+  memory, so the records stay with the zones. Saving in place writes them back
+  unchanged.
+- Loading drops a record whose sample length, window or format does not match
+  the bank. Unlocking moves the records onto the entries of the decoded
+  samples.
 - "Transfer all to working instrument" copies the records with the entries and
-  merges the source files. Unlocking an instrument replaces its entries and
-  carries the records over.
-- Loading and saving a `.fsi` reads and writes the records. A record whose
-  window does not match the bank is dropped on load.
-- The export adds the resample, depth and cut steps it applies, and computes
-  the result fingerprints from the audio it stores.
+  merges the source files. A file that the working instrument already has, with
+  the same name, folder, size and hash, is not added twice.
+- Before the export adds its steps, it checks the result fingerprint of each
+  record against the audio it reads. A record that does not match is left out
+  with a warning, because a rebuild from it would give other audio. The export
+  then adds the resample, depth and cut steps it applies, and computes the
+  result fingerprints from the audio it stores.
 - The export dialog shows "Shareable", or "Not shareable" with the number of
   zones that have no source and the collections they are in. An "Include
   source records" checkbox is on by default, because records cannot be added
@@ -166,8 +176,9 @@ Conversion:
 
 Rebuild:
 
-- Opens a `.fsi` and lists the `.gig` files that its zones use, with the folder
-  name and the status of each file. A file that no zone uses is not requested.
+- Opens a `.fsi`, in the Inspect tab or with the `rebuild` command, and lists
+  the `.gig` files that its zones use, with the folder name and the status of
+  each file. A file that no zone uses is not requested.
 - Asks the user to locate each file, or searches a library folder by folder
   name, file name and size.
 - Decodes only the samples that the zones use, replays their steps and runs
