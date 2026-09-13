@@ -31,7 +31,8 @@ enum CollectionFXType {
     COLLECTION_FX_SUSTAIN_PEDAL = 21,
     COLLECTION_FX_VOLUME_ENVELOPE = 22,
     COLLECTION_FX_PANNER = 23,
-    COLLECTION_FX_COMPRESSOR = 24
+    COLLECTION_FX_COMPRESSOR = 24,
+    COLLECTION_FX_SMART_RELEASE = 25
 };
 
 enum CFX_GainParams {
@@ -145,6 +146,23 @@ enum CFX_CompressorParams {
     CFX_COMP_HOLD_MS      = 7,
     CFX_COMP_MAKEUP_DB    = 8,
     CFX_COMP_SIDECHAIN_HZ = 9
+};
+
+// =============================================================================
+// A release sample is brought to the sustain it ends: to the level the
+// sustain was heard at as the key came up, and in over the release that
+// sustain fades out over. Each half has a switch. The level half is a
+// difference in dB held within a reach, scaled by an amount, with an offset
+// on top; the attack half is a share of the sustain's release, with a bend.
+// =============================================================================
+enum CFX_SmartReleaseParams {
+    CFX_SREL_LEVEL_ON      = 1,
+    CFX_SREL_LEVEL_DB      = 2,
+    CFX_SREL_LEVEL_AMOUNT  = 3,
+    CFX_SREL_LEVEL_OFFSET  = 4,
+    CFX_SREL_ATTACK_ON     = 5,
+    CFX_SREL_ATTACK_PCT    = 6,
+    CFX_SREL_ATTACK_BEND   = 7
 };
 
 enum CollectionFXDriverSource {
@@ -271,7 +289,7 @@ enum BFX_GainParams {
 
 #define MAX_FX_PARAMS           32
 
-#define COLLECTION_FX_TYPE_COUNT 25
+#define COLLECTION_FX_TYPE_COUNT 26
 
 #define CFX_STRENGTH 0
 
@@ -282,6 +300,16 @@ enum BFX_GainParams {
 #define CFX_PANNER_PARAM_COUNT (CFX_PAN_SHUFFLE_DB + 1)
 
 #define CFX_COMPRESSOR_PARAM_COUNT (CFX_COMP_SIDECHAIN_HZ + 1)
+
+#define CFX_SMART_RELEASE_PARAM_COUNT (CFX_SREL_ATTACK_BEND + 1)
+
+#define SREL_MAX_MATCH_DB      60.0f
+
+#define SREL_DEFAULT_MATCH_DB  40.0f
+
+#define SREL_MAX_OFFSET_DB     24.0f
+
+#define SREL_MAX_ATTACK_PCT   200.0f
 
 #define CFX_HOLD_RISE_DEFAULT_MS 120.0f
 
