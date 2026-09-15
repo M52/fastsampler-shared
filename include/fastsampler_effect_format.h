@@ -192,7 +192,20 @@ enum CFX_SimulatedLegatoParams {
     CFX_SIMLEG_QUALITY        = 16,
     CFX_SIMLEG_SAMPLED_POLICY = 17,
     CFX_SIMLEG_VARIATION      = 18,
-    CFX_SIMLEG_MAX_INTERVAL   = 19
+    CFX_SIMLEG_MAX_INTERVAL   = 19,
+
+    // =============================================================================
+    // How much of its key release a note a connection leaves behind keeps:
+    // its release samples and the fall of its sustain, before a run and the
+    // note's own shortness take their share.
+    // =============================================================================
+    CFX_SIMLEG_RELEASES       = 20,
+
+    // =============================================================================
+    // When the note reached takes over within the handover: later brings it
+    // in more softly while the note left holds, sooner brings it in harder.
+    // =============================================================================
+    CFX_SIMLEG_ARRIVAL_CURVE  = 21
 };
 
 enum SimLegatoFamily {
@@ -387,7 +400,7 @@ enum BFX_GainParams {
 
 #define CFX_SMART_RELEASE_PARAM_COUNT (CFX_SREL_ATTACK_BEND + 1)
 
-#define CFX_SIMULATED_LEGATO_PARAM_COUNT (CFX_SIMLEG_MAX_INTERVAL + 1)
+#define CFX_SIMULATED_LEGATO_PARAM_COUNT (CFX_SIMLEG_ARRIVAL_CURVE + 1)
 
 #define SIMLEG_FAMILY_COUNT         3
 #define SIMLEG_PROFILES_PER_FAMILY  4
