@@ -168,44 +168,49 @@ enum CFX_SmartReleaseParams {
 
 // =============================================================================
 // Simulated legato: a connected note is played from the sustain of the note
-// it leaves, with no recorded transition. The family and the profile name the
-// instrument and so the gestures it makes; the style is what the player asks
-// for at the key; the rest scales how far each part of a gesture goes. The
-// enumerated values are stored, so they are numbered here.
+// it leaves, with no recorded transition. The note left bends toward the
+// note reached while it fades, the note reached enters past its attack and
+// bends up to its own pitch as it comes in, and both dip a little where they
+// cross. The family and the profile name the instrument and so the figures;
+// the style is what the player asks for at the key. The enumerated values
+// are stored, so they are numbered here. The layout was compacted in
+// September 2026 when the effect was rebuilt: a record written by an earlier
+// build reads its figures into the wrong slots.
 // =============================================================================
 enum CFX_SimulatedLegatoParams {
-    CFX_SIMLEG_FAMILY         = 1,
-    CFX_SIMLEG_PROFILE        = 2,
-    CFX_SIMLEG_STYLE          = 3,
-    CFX_SIMLEG_TIME_MS        = 4,
-    CFX_SIMLEG_SPEED_RESPONSE = 5,
-    CFX_SIMLEG_GAP_MS         = 6,
-    CFX_SIMLEG_ATTACK_DETAIL  = 7,
-    CFX_SIMLEG_PORTAMENTO     = 8,
-    CFX_SIMLEG_COLOUR         = 9,
-    CFX_SIMLEG_EXCITATION     = 10,
-    CFX_SIMLEG_CONTINUITY     = 11,
-    CFX_SIMLEG_NOISE          = 12,
-    CFX_SIMLEG_VIBRATO        = 13,
-    CFX_SIMLEG_RETURN         = 14,
-    CFX_SIMLEG_REPEAT         = 15,
-    CFX_SIMLEG_QUALITY        = 16,
-    CFX_SIMLEG_SAMPLED_POLICY = 17,
-    CFX_SIMLEG_VARIATION      = 18,
-    CFX_SIMLEG_MAX_INTERVAL   = 19,
-
+    CFX_SIMLEG_FAMILY          = 1,
+    CFX_SIMLEG_PROFILE         = 2,
+    CFX_SIMLEG_STYLE           = 3,
     // =============================================================================
-    // How much of its key release a note a connection leaves behind keeps:
-    // its release samples and the fall of its sustain, before a run and the
-    // note's own shortness take their share.
+    // The crossfade between the two notes, in milliseconds, and the bend:
+    // how far the two notes lean toward each other at a semitone, in cents,
+    // and how long the lean takes. The portamento is the share of the rest
+    // of the interval the bend covers, up to the whole of it, over the glide
+    // time an octave takes.
     // =============================================================================
-    CFX_SIMLEG_RELEASES       = 20,
-
+    CFX_SIMLEG_XFADE_MS        = 4,
+    CFX_SIMLEG_BEND_CENTS      = 5,
+    CFX_SIMLEG_BEND_MS         = 6,
+    CFX_SIMLEG_PORTAMENTO      = 7,
+    CFX_SIMLEG_GLIDE_MS        = 8,
+    CFX_SIMLEG_DIP_DB          = 9,
     // =============================================================================
-    // When the note reached takes over within the handover: later brings it
-    // in more softly while the note left holds, sooner brings it in harder.
+    // Where a connected note enters its sample past the onset, and how far a
+    // draw per key moves that later.
     // =============================================================================
-    CFX_SIMLEG_ARRIVAL_CURVE  = 21
+    CFX_SIMLEG_ENTRY_MS        = 10,
+    CFX_SIMLEG_ENTRY_SPREAD_MS = 11,
+    CFX_SIMLEG_SPEED_RESPONSE  = 12,
+    CFX_SIMLEG_GAP_MS          = 13,
+    CFX_SIMLEG_RETURN          = 14,
+    CFX_SIMLEG_REPEAT          = 15,
+    CFX_SIMLEG_SAMPLED_POLICY  = 16,
+    CFX_SIMLEG_MAX_INTERVAL    = 17,
+    // =============================================================================
+    // How much of its key release a note a connection leaves behind keeps,
+    // when it has release samples to carry it.
+    // =============================================================================
+    CFX_SIMLEG_RELEASES        = 18
 };
 
 enum SimLegatoFamily {
@@ -217,7 +222,8 @@ enum SimLegatoFamily {
 enum SimLegatoStringsProfile {
     SIMLEG_STRINGS_VIOLIN  = 0,
     SIMLEG_STRINGS_CELLO   = 1,
-    SIMLEG_STRINGS_SECTION = 2
+    SIMLEG_STRINGS_SECTION = 2,
+    SIMLEG_STRINGS_BASS    = 3
 };
 
 enum SimLegatoBrassProfile {
@@ -240,21 +246,10 @@ enum SimLegatoStyle {
     SIMLEG_STYLE_PORTAMENTO   = 2
 };
 
-enum SimLegatoVibrato {
-    SIMLEG_VIBRATO_PRESERVE = 0,
-    SIMLEG_VIBRATO_PHRASE   = 1
-};
-
 enum SimLegatoRepeat {
     SIMLEG_REPEAT_REARTICULATE = 0,
     SIMLEG_REPEAT_RETRIGGER    = 1,
     SIMLEG_REPEAT_HOLD         = 2
-};
-
-enum SimLegatoQuality {
-    SIMLEG_QUALITY_ECONOMY = 0,
-    SIMLEG_QUALITY_NORMAL  = 1,
-    SIMLEG_QUALITY_HIGH    = 2
 };
 
 enum SimLegatoSampledPolicy {
@@ -400,14 +395,12 @@ enum BFX_GainParams {
 
 #define CFX_SMART_RELEASE_PARAM_COUNT (CFX_SREL_ATTACK_BEND + 1)
 
-#define CFX_SIMULATED_LEGATO_PARAM_COUNT (CFX_SIMLEG_ARRIVAL_CURVE + 1)
+#define CFX_SIMULATED_LEGATO_PARAM_COUNT (CFX_SIMLEG_RELEASES + 1)
 
 #define SIMLEG_FAMILY_COUNT         3
 #define SIMLEG_PROFILES_PER_FAMILY  4
 #define SIMLEG_STYLE_COUNT          3
-#define SIMLEG_VIBRATO_COUNT        2
 #define SIMLEG_REPEAT_COUNT         3
-#define SIMLEG_QUALITY_COUNT        3
 #define SIMLEG_SAMPLED_POLICY_COUNT 2
 
 #define SREL_MAX_MATCH_DB      60.0f
