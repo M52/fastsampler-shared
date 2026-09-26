@@ -18,6 +18,16 @@
 #define COLLECTION_ID_NONE 0u
 #define FSI_MIXER_REVISION 2u
 #define FSI_MIXER_REVISION_OLDEST 1u
+// A file with banks carries this revision. Readers of revision 2 refuse it.
+#define FSI_MIXER_REVISION_BANKS 3u
+// The newest revision that a reader of this release reads.
+#define FSI_MIXER_REVISION_NEWEST 3u
+#define FSI_MAX_BANKS 8
+// The stable ID of the one bank of a file without banks.
+#define FSI_BANK_ID_IMPLICIT 1u
+// In memory only: a bank that was not built from one output bus. The file
+// leaves authoring_bus out.
+#define FSI_BANK_BUS_NONE 0xFFu
 #define FS_FORMAT_PATH_LENGTH 260
 #define COLLECTION_LINK_MAX_RULE 255
 #define CFX_RR_MODE_SEQUENCE 0

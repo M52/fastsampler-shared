@@ -17,6 +17,11 @@ syntax = "proto2";
 
 message FSIFile {
     required string instrument_name = 1;
+    // =============================================================================
+    // The bank of a file without banks, resolved beside the .fsi. A file with
+    // banks gives the file name of the .fsi itself here. A reader that does not
+    // know banks then finds no bank header in this file and refuses it.
+    // =============================================================================
     required string fsb_path = 2;
     repeated FSICollection collections = 3;
     repeated FSIZone zones = 4;
@@ -34,8 +39,12 @@ message FSIFile {
     // The mixer schema this file was written with. Absence means the file
     // predates the output mixer, and its preliminary bus fields describe
     // something the mixer does not read; such a file loads with default
-    // routing. This marks the serialization only. It never selects a playback
-    // path.
+    // routing. Revision 2 is the mixer with aux sends. Revision 3 changes no
+    // mixer field: a writer gives it only to a file with banks, because
+    // FastSampler builds from 699 that do not read banks refuse a revision
+    // they do not know. The banks field, not this number, tells a reader that
+    // zones name banks. This marks the serialization only. It never selects a
+    // playback path.
     // =============================================================================
     optional uint32 mixer_revision = 14;
 
@@ -49,10 +58,73 @@ message FSIFile {
 
     // =============================================================================
     // The sample rate and channel count of the bank that the source records
-    // make.
+    // make. A file with banks does not have them: the records of a zone have
+    // the format of the bank of that zone.
     // =============================================================================
     optional uint32 bank_sample_rate = 17;
     optional uint32 bank_channels = 18;
+
+    // =============================================================================
+    // The sample banks. Absent means one bank: fsb_path, whose row z holds zone
+    // z. When present: every zone names its bank and row, every row of every
+    // bank belongs to exactly one zone, the zones of one collection are in one
+    // bank, fsb_path gives the file name of the .fsi itself, mixer_revision is
+    // 3 or more, and bank_sample_rate and bank_channels are absent.
+    // =============================================================================
+    repeated FSIBank banks = 19;
+
+    // =============================================================================
+    // The ID that a writer gives to the next bank it adds. It is above every
+    // bank ID in the file. Writers keep it, so that an ID never goes to a
+    // different bank again. Required in a file with banks. In a file without
+    // banks it is 2 or more, and absence means 2.
+    // =============================================================================
+    optional uint32 next_bank_id = 20;
+}
+
+// =============================================================================
+// One sample bank of a file with banks. All fields are optional on the wire,
+// but a file with banks gives every field except name and authoring_bus.
+// =============================================================================
+message FSIBank {
+    // =============================================================================
+    // Not zero, and no other bank of the file has it. A player names the bank
+    // by this ID outside the file, for example in a project. The one bank of a
+    // file without banks has ID 1.
+    // =============================================================================
+    optional uint32 stable_id = 1;
+    // =============================================================================
+    // The name that a player shows, for example the microphone.
+    // =============================================================================
+    optional string name = 2;
+    // =============================================================================
+    // The FSB file. A relative path starts at the folder of the .fsi, uses '/'
+    // and can contain '..'. A path on a different root is absolute. Readers
+    // also accept a backslash.
+    // =============================================================================
+    optional string fsb_path = 3;
+    // =============================================================================
+    // The zero-based output bus that the bank was built from. Absent when the
+    // bank was not built from one bus. Two banks never name the same bus. This
+    // routes nothing: the output_bus of each collection does.
+    // =============================================================================
+    optional uint32 authoring_bus = 4;
+    // =============================================================================
+    // Equal to the zone_count, sample_rate, channels and bps of the bank
+    // header. All banks of a file have the same rate. The source records of the
+    // zones of a bank have the format of that bank.
+    // =============================================================================
+    optional uint32 row_count = 5;
+    optional uint32 sample_rate = 6;
+    optional uint32 channels = 7;
+    optional uint32 bps = 8;
+    // =============================================================================
+    // XXH64 with seed 0 over the header and rows as the bank stores them, and
+    // over the bytes of its preload frames. A bank with different digests is
+    // not the bank that this file was made with.
+    // =============================================================================
+    optional fixed64 table_digest = 9;
+    optional fixed64 preload_digest = 10;
 }
 
 message FSIBusInsert {
@@ -126,6 +198,17 @@ message FSICollection {
     // Absent or zero means it holds none.
     // =============================================================================
     optional uint32 release_of = 11;
+
+    // =============================================================================
+    // The stable ID of the collection that this one is a microphone copy of.
+    // A copy holds the same performance recorded through another microphone,
+    // and a player makes the same round-robin, random and legato decisions
+    // for it as for that collection, also while some of their banks are
+    // unloaded. The collection it names is not a copy itself. Absent or zero
+    // means that this collection is not a copy. A reader ignores a value
+    // that breaks these rules.
+    // =============================================================================
+    optional uint32 mic_copy_of = 12;
 }
 
 message FSIZone {
@@ -174,6 +257,13 @@ message FSIZone {
     optional uint32 source_sample = 32;
     optional uint32 source_first = 33;
     optional uint32 source_frames = 34;
+    // =============================================================================
+    // The zero-based index into FSIFile.banks and the zero-based row in that
+    // bank. Given for every zone of a file with banks, and never in a file
+    // without banks.
+    // =============================================================================
+    optional uint32 bank = 35;
+    optional uint32 bank_row = 36;
 }
 
 message FSIInstrumentFX {

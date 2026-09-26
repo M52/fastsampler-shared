@@ -65,6 +65,23 @@ the other programs bit for bit:
 - The cubic resampler turns contraction off for Clang with a pragma. Do not
   override it with compiler flags.
 
+## Sample banks
+
+Release 1.2.0 adds sample banks to FSI: `banks` and `next_bank_id` in
+`FSIFile`, the `FSIBank` message, `bank` and `bank_row` in `FSIZone`, and
+`mic_copy_of` in `FSICollection`. Files without banks load as before. The
+rules are in [README.md](README.md#sample-banks).
+
+- A consumer that writes banks calls `fs_banks_check_file` before it writes,
+  never writes `bank_sample_rate` or `bank_channels` with banks, and gives
+  `fsb_path` the file name of the `.fsi` that it writes.
+- A consumer that cannot put zones in banks refuses a file that has them. A
+  program that reads FSI files compiles `src/fastsampler_banks.cpp` for these
+  checks.
+- `FSI_MIXER_REVISION` stays 2 for files without banks. A file with banks has
+  `FSI_MIXER_REVISION_BANKS`, and a reader compares the revision with
+  `FSI_MIXER_REVISION_NEWEST`.
+
 ## Spectral fingerprint analysis
 
 FastSampler measures the collection that carries a spectral morph filter when

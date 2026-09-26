@@ -61,6 +61,13 @@ FSIFile.buses                       max_count:16
 FSIBus.name                         max_size:64
 
 # =============================================================================
+# One entry per sample bank. Keep this capacity at FSI_MAX_BANKS.
+# =============================================================================
+FSIFile.banks                       max_count:8
+FSIBank.name                        max_size:64
+FSIBank.fsb_path                    max_size:260
+
+# =============================================================================
 # Keep these capacities consistent with MAX_BFX_PER_BUS and MAX_BFX_PARAMS.
 # Raising either without raising the count here drops inserts or parameters
 # from every saved instrument.

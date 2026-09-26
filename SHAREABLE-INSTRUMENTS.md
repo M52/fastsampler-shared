@@ -57,6 +57,11 @@ Per zone, in `FSIZone`:
 Several zones can share one stored sample, so the records sit on stored samples
 and zones point at them.
 
+In a file with sample banks, `bank_sample_rate` and `bank_channels` are
+absent. The records of a zone have the format of its bank, and a stored sample
+belongs to one bank. All banks share the source files. A rebuild makes each
+bank from the records of its zones, in bank row order.
+
 ## Steps
 
 `fastsampler_source_format.h` holds the step IDs, and `fastsampler_source.h`
@@ -197,6 +202,8 @@ Rebuild:
   converted again.
 - FastResampler renders have no `.gig` source. FastResampler only updates its
   submodule.
+- fsbanktool with shared code before release 1.2.0 does not rebuild a file with
+  sample banks, because the file gives no bank format.
 - The schema change and the consumer updates follow CONSUMERS.md.
 
 ## Open details

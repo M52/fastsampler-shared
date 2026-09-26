@@ -28,7 +28,12 @@ PB_BIND(FSIBusSend, FSIBusSend, AUTO)
 
 PB_BIND(FSICollection, FSICollection, AUTO)
 
-PB_BIND(FSIZone, FSIZone, AUTO)
+// =============================================================================
+// A one-word field descriptor holds offsets up to 255 bytes only. bank_row is
+// at a larger offset, so FSIZone uses two words. The width does not change the
+// encoded bytes.
+// =============================================================================
+PB_BIND(FSIZone, FSIZone, 2)
 
 PB_BIND(FSIInstrumentFX, FSIInstrumentFX, 2)
 
@@ -47,6 +52,8 @@ PB_BIND(FSISourceFile, FSISourceFile, 2)
 PB_BIND(FSISourceStep, FSISourceStep, AUTO)
 
 PB_BIND(FSISourceSample, FSISourceSample, 2)
+
+PB_BIND(FSIBank, FSIBank, 2)
 
 PB_BIND(FSPFile, FSPFile, AUTO)
 
