@@ -47,6 +47,7 @@ struct _FSIBank;
 #define FS_BANKS_ERR_NEXT_ID        18u  // next_bank_id absent with banks, or not above every ID
 #define FS_BANKS_ERR_SOURCE_BANK    19u  // one stored sample used by zones of two banks
 #define FS_BANKS_ERR_SELF_PATH      20u  // banks, and fsb_path empty or with a folder part
+#define FS_BANKS_ERR_RANGE          21u  // a collection range past the last zone, or a zone in no collection range
 
 // =============================================================================
 // Problems of a bank file against what its FSI records.
@@ -87,7 +88,7 @@ struct FsBankFacts {
 
 // =============================================================================
 // Checks the bank rules of a decoded or built FSIFile. out can be null. Uses
-// about 8 KB of stack. Do not call it on the audio thread.
+// about 9 KB of stack. Do not call it on the audio thread.
 // =============================================================================
 uint32_t fs_banks_check_file(const struct _FSIFile* msg, FsBanksProblem* out);
 

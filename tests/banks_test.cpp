@@ -247,6 +247,30 @@ static int test_file_rules(FSIFile* msg, const BankFixture* fx) {
     msg->zones[1].bank = 1; msg->zones[1].bank_row = 0;
     msg->zones[2].bank = 0; msg->zones[2].bank_row = 0;
     EXPECT_PROBLEM(msg, FS_BANKS_ERR_COLLECTION, 1, 1, N, 0);
+
+    // A reader gives a zone in no collection range to collection 0, which
+    // would then hold zones of two banks.
+    build_file(msg, fx); msg->collections[2].zone_count = 2;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_RANGE, N, 5, N, N);
+    build_file(msg, fx); msg->collections_count = 0;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_RANGE, N, 0, N, N);
+    build_file(msg, fx); msg->collections[2].zone_count = 4;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_RANGE, N, N, N, 2);
+    build_file(msg, fx); msg->collections[1].first_zone_index = 6;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_RANGE, N, N, N, 1);
+    build_file(msg, fx); msg->collections[2].zone_count = 0xFFFFFFFFu;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_RANGE, N, N, N, 2);
+
+    // A collection without zones has no range, as the writer makes it after
+    // the last zone.
+    build_file(msg, fx);
+    msg->collections_count = 4;
+    msg->collections[3].first_zone_index = 6;
+    msg->collections[3].zone_count = 0;
+    EXPECT_PROBLEM(msg, FS_BANKS_OK, N, N, N, N);
+    msg->collections[3].first_zone_index = 1000;
+    EXPECT_PROBLEM(msg, FS_BANKS_OK, N, N, N, N);
+
     build_file(msg, fx); msg->zones[2].source_sample = 1;
     EXPECT_PROBLEM(msg, FS_BANKS_ERR_SOURCE_BANK, 1, 2, N, N);
 

@@ -54,6 +54,8 @@ the checks and the digests. The `FS_BANKS_ERR_*` codes name each rule.
   - Every row of every bank belongs to exactly one zone.
   - All zones of one collection are in one bank. A collection without zones
     has no bank.
+  - The range of each collection with zones ends at or before the last zone,
+    and each zone is in the range of a collection.
   - `fsb_path` is the file name of the `.fsi` itself, without a folder.
   - `mixer_revision` is 3 (`FSI_MIXER_REVISION_BANKS`) or more.
   - `bank_sample_rate` and `bank_channels` are absent.

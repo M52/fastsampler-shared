@@ -161,19 +161,29 @@ uint32_t fs_banks_check_file(const FSIFile* msg, FsBanksProblem* out) {
     }
 
     // =============================================================================
-    // All zones of one collection are in the bank of its first zone. A range
-    // that does not fit the zones is left to the reader, which clamps it.
+    // All zones of one collection are in the bank of its first zone. The range
+    // of each collection with zones fits in the zones, and each zone is in a
+    // range. A reader gives a zone in no range to collection 0, so without
+    // these two rules a collection could get zones of more than one bank.
     // =============================================================================
+    uint8_t in_range[FS_BANKS_MAX_ROWS / 8];
+    memset(in_range, 0, sizeof(in_range));
     uint32_t collection_count = fs_banks_min(msg->collections_count, FS_BANKS_COLLECTION_CAPACITY);
     for (uint32_t c = 0; c < collection_count; ++c) {
         const FSICollection& col = msg->collections[c];
         if (col.zone_count == 0) continue;
-        if (col.first_zone_index >= zone_count || col.zone_count > zone_count - col.first_zone_index) continue;
+        if (col.first_zone_index >= zone_count || col.zone_count > zone_count - col.first_zone_index)
+            return fs_banks_fail(out, FS_BANKS_ERR_RANGE, FS_BANKS_NONE, FS_BANKS_NONE, FS_BANKS_NONE, c);
         uint32_t bank = msg->zones[col.first_zone_index].bank;
-        for (uint32_t z = col.first_zone_index + 1; z < col.first_zone_index + col.zone_count; ++z) {
+        for (uint32_t z = col.first_zone_index; z < col.first_zone_index + col.zone_count; ++z) {
             if (msg->zones[z].bank != bank)
                 return fs_banks_fail(out, FS_BANKS_ERR_COLLECTION, msg->zones[z].bank, z, FS_BANKS_NONE, c);
+            in_range[z >> 3] |= (uint8_t)(1u << (z & 7u));
         }
+    }
+    for (uint32_t z = 0; z < zone_count; ++z) {
+        if (!(in_range[z >> 3] & (uint8_t)(1u << (z & 7u))))
+            return fs_banks_fail(out, FS_BANKS_ERR_RANGE, FS_BANKS_NONE, z, FS_BANKS_NONE, FS_BANKS_NONE);
     }
 
     // =============================================================================
@@ -335,6 +345,7 @@ const char* fs_banks_problem_text(uint32_t code) {
     case FS_BANKS_ERR_NEXT_ID:         return "the next bank ID is not above every bank ID";
     case FS_BANKS_ERR_SOURCE_BANK:     return "zones of two banks use the same stored sample";
     case FS_BANKS_ERR_SELF_PATH:       return "a file with sample banks must give its own file name as its bank";
+    case FS_BANKS_ERR_RANGE:           return "a collection names zones that do not exist, or a zone is in no collection";
     case FS_BANKS_ERR_FILE_HEADER:     return "the bank file is not a valid sample bank";
     case FS_BANKS_ERR_FILE_ROWS:       return "the bank file does not have the number of rows this instrument was made with";
     case FS_BANKS_ERR_FILE_FORMAT:     return "the bank file does not have the format this instrument was made with";

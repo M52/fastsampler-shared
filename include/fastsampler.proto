@@ -68,8 +68,10 @@ message FSIFile {
     // The sample banks. Absent means one bank: fsb_path, whose row z holds zone
     // z. When present: every zone names its bank and row, every row of every
     // bank belongs to exactly one zone, the zones of one collection are in one
-    // bank, fsb_path gives the file name of the .fsi itself, mixer_revision is
-    // 3 or more, and bank_sample_rate and bank_channels are absent.
+    // bank, each zone is in the range of a collection and no range goes past
+    // the last zone, fsb_path gives the file name of the .fsi itself,
+    // mixer_revision is 3 or more, and bank_sample_rate and bank_channels are
+    // absent.
     // =============================================================================
     repeated FSIBank banks = 19;
 
