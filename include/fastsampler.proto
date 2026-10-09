@@ -127,6 +127,12 @@ message FSIBank {
     // =============================================================================
     optional fixed64 table_digest = 9;
     optional fixed64 preload_digest = 10;
+    // =============================================================================
+    // True when the user had the bank out of RAM when the file was saved. A
+    // player then opens the file with the bank purged, until the user loads it.
+    // Absent means false. When every bank is purged, a player still loads one.
+    // =============================================================================
+    optional bool purged = 11;
 }
 
 message FSIBusInsert {

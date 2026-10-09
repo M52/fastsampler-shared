@@ -100,6 +100,11 @@ bus is below 8 and no other bank gives it. All banks have the same sample
 rate. The channel count and bit depth can differ between banks. The source
 records of the zones of a bank have the format of that bank.
 
+A bank entry can give `purged`: the user had the bank out of RAM when the file
+was saved. A player opens the file with that bank purged until the user loads
+it, and loads one bank when every bank is purged. Absent means false. A reader
+that does not know `purged` loads every bank.
+
 The digests are XXH64 with seed 0. `table_digest` covers the FSB header and
 rows as the bank stores them: 44 bytes, plus 104 bytes for each row of a
 version 1 bank or 128 bytes for each row of a version 2 bank. `preload_digest`

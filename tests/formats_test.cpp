@@ -76,11 +76,23 @@ int main() {
     CHECK(bank_entry.has_channels && bank_entry.channels == 2 && bank_entry.has_bps && bank_entry.bps == 24);
     CHECK(bank_entry.has_table_digest && bank_entry.table_digest == 0x0102030405060708ull);
     CHECK(bank_entry.has_preload_digest && bank_entry.preload_digest == 0x1112131415161718ull);
+    CHECK(!bank_entry.has_purged && !bank_entry.purged);
     unsigned char bank_encoded[64] = {};
     output = pb_ostream_from_buffer(bank_encoded, sizeof(bank_encoded));
     CHECK(pb_encode(&output, FSIBank_fields, &bank_entry));
     CHECK(output.bytes_written == sizeof(bank_wire));
     CHECK(std::memcmp(bank_wire, bank_encoded, sizeof(bank_wire)) == 0);
+
+    const unsigned char purged_wire[] = {0x08, 0x07, 0x58, 0x01};
+    FSIBank purged_entry = FSIBank_init_default;
+    input = pb_istream_from_buffer(purged_wire, sizeof(purged_wire));
+    CHECK(pb_decode(&input, FSIBank_fields, &purged_entry));
+    CHECK(purged_entry.stable_id == 7 && purged_entry.has_purged && purged_entry.purged);
+    unsigned char purged_encoded[8] = {};
+    output = pb_ostream_from_buffer(purged_encoded, sizeof(purged_encoded));
+    CHECK(pb_encode(&output, FSIBank_fields, &purged_entry));
+    CHECK(output.bytes_written == sizeof(purged_wire));
+    CHECK(std::memcmp(purged_wire, purged_encoded, sizeof(purged_wire)) == 0);
 
     std::vector<unsigned char> file_wire = {0x0a, 0x01, 'x', 0x12, 0x05, 'x', '.', 'f', 's', 'i',
                                             0x70, 0x03, 0x9a, 0x01, 0x34};
