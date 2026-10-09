@@ -19,7 +19,7 @@ struct _FSIBank;
 // The row limit of one bank. It is equal to the zone capacity of FSIFile,
 // because every bank row belongs to one zone.
 // =============================================================================
-#define FS_BANKS_MAX_ROWS 4096
+#define FS_BANKS_MAX_ROWS 8192
 #define FS_BANKS_NONE 0xFFFFFFFFu
 
 #define FS_BANKS_OK 0u

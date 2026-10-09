@@ -13,7 +13,7 @@
 // fastsampler.options.
 // =============================================================================
 #define FS_SOURCE_MAX_FILES         256
-#define FS_SOURCE_MAX_SAMPLES       4096
+#define FS_SOURCE_MAX_SAMPLES       8192
 #define FS_SOURCE_MAX_STEPS         8
 #define FS_SOURCE_NAME_LENGTH       128
 

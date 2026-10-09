@@ -94,7 +94,7 @@ A file with banks has 1 to 8 (`FSI_MAX_BANKS`) entries in `banks`:
 - Collection ranges and FSP peak rows count zones in file order.
 
 A bank entry has a `stable_id` that is not 0 and that no other bank has, an
-`fsb_path` that is not empty, `row_count` 1 to 4096, `sample_rate`, `channels`
+`fsb_path` that is not empty, `row_count` 1 to 8192, `sample_rate`, `channels`
 1 or 2, `bps` 16 or 24, and both digests. When it gives `authoring_bus`, the
 bus is below 8 and no other bank gives it. All banks have the same sample
 rate. The channel count and bit depth can differ between banks. The source
@@ -154,7 +154,7 @@ In `FSIFile`:
 - `source_files`, up to 256: the file name, the name of its parent folder, and
   the size and hash of each source file. An extension file names its main file
   in `extension_of`. No entry holds a full path.
-- `source_samples`, up to 4096 stored samples.
+- `source_samples`, up to 8192 stored samples.
 
 In `FSISourceSample`:
 

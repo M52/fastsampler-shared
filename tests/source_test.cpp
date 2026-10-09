@@ -374,7 +374,7 @@ int main() {
         CHECK(FSIFile_bank_sample_rate_tag == 17 && FSIFile_bank_channels_tag == 18);
         CHECK(FSIZone_source_sample_tag == 32 && FSIZone_source_first_tag == 33 && FSIZone_source_frames_tag == 34);
         CHECK(FSISourceSample_steps_tag == 4 && FSISourceSample_result_fingerprint_tag == 7);
-        CHECK(FS_SOURCE_MAX_FILES == 256 && FS_SOURCE_MAX_SAMPLES == 4096 && FS_SOURCE_MAX_STEPS == 8);
+        CHECK(FS_SOURCE_MAX_FILES == 256 && FS_SOURCE_MAX_SAMPLES == 8192 && FS_SOURCE_MAX_STEPS == 8);
 
         auto written = std::make_unique<FSIFile>();
         auto decoded = std::make_unique<FSIFile>();

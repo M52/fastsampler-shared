@@ -13,7 +13,7 @@ FSIFile.collections             max_count:128
 # Keep the zone capacity at or above MAX_ZONES. The writer stores one record
 # per zone.
 # =============================================================================
-FSIFile.zones                   max_count:4096
+FSIFile.zones                   max_count:8192
 FSIFile.modulators              max_count:1024
 FSIFile.smf_fingerprints        max_count:128
 
@@ -84,7 +84,7 @@ FSIBus.sends                        max_count:8
 # Keep these capacities consistent with fastsampler_source_format.h.
 # =============================================================================
 FSIFile.source_files                max_count:256
-FSIFile.source_samples              max_count:4096
+FSIFile.source_samples              max_count:8192
 FSISourceFile.name                  max_size:128
 FSISourceFile.folder                max_size:128
 FSISourceSample.steps               max_count:8
