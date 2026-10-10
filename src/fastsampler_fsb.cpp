@@ -25,13 +25,52 @@ static void fsb_zone_entry_from_v1(const FSBZoneEntryV1& v1, uint32_t index, FSB
     out->stream_first_frame   = v1.preload_frame_count;
 }
 
+// =============================================================================
+// Both ranges must be inside the file, so neither end overflows.
+// =============================================================================
+static bool fsb_ranges_overlap(uint64_t a, uint64_t a_size, uint64_t b, uint64_t b_size) {
+    return a_size > 0 && b_size > 0 && a < b + b_size && b < a + a_size;
+}
+
+// =============================================================================
+// A metadata block lies after the rows, inside the file, and apart from the
+// preload block and every stream.
+// =============================================================================
+static bool fsb_metadata_fits(const FSBMetadataSpan& metadata, const FSBHeader& header, const FSBZoneEntry* zones,
+                              uint64_t rows_end, uint64_t fsb_map_size) {
+    if (metadata.size == 0) return metadata.offset == 0;
+    if (metadata.size > FSB_MAX_METADATA_SIZE) return false;
+    if (metadata.offset < rows_end || metadata.offset > fsb_map_size ||
+        metadata.size > fsb_map_size - metadata.offset) {
+        return false;
+    }
+    if (fsb_ranges_overlap(metadata.offset, metadata.size, header.preload_offset, header.preload_size)) return false;
+    for (uint32_t i = 0; i < header.zone_count; ++i) {
+        if (fsb_ranges_overlap(metadata.offset, metadata.size, zones[i].stream_offset, zones[i].stream_size)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool fsb_load_headers(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header, FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count) {
+    return fsb_load_headers_with_metadata(fsb_map_view, fsb_map_size, out_header, out_zones, max_zones,
+                                          expected_zone_count, nullptr);
+}
+
+bool fsb_load_headers_with_metadata(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header,
+                                    FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count,
+                                    FSBMetadataSpan* out_metadata) {
+    if (out_metadata) memset(out_metadata, 0, sizeof(*out_metadata));
     if (!fsb_map_view || !out_header || !out_zones) return false;
     if (fsb_map_size < sizeof(FSBHeader)) return false;
 
     memcpy(out_header, fsb_map_view, sizeof(FSBHeader));
     if (out_header->magic != FSB_MAGIC) return false;
-    if (out_header->version != FSB_VERSION && out_header->version != FSB_VERSION_PER_ZONE) return false;
+    if (out_header->version != FSB_VERSION && out_header->version != FSB_VERSION_SHARED_SAMPLES &&
+        out_header->version != FSB_VERSION_PER_ZONE) {
+        return false;
+    }
     bool is_v1 = (out_header->version == FSB_VERSION_PER_ZONE);
 
     if (out_header->channels != 1 && out_header->channels != 2) return false;
@@ -49,11 +88,17 @@ bool fsb_load_headers(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHea
         return false;
     }
 
+    uint64_t rows_offset = fsb_rows_offset(out_header->version);
     size_t entry_size = is_v1 ? sizeof(FSBZoneEntryV1) : sizeof(FSBZoneEntry);
-    size_t required_size = sizeof(FSBHeader) + entry_size * out_header->zone_count;
-    if (fsb_map_size < required_size) return false;
+    uint64_t rows_end = rows_offset + (uint64_t)entry_size * out_header->zone_count;
+    if (fsb_map_size < rows_end) return false;
 
-    const uint8_t* rows = fsb_map_view + sizeof(FSBHeader);
+    FSBMetadataSpan metadata = {};
+    if (out_header->version == FSB_VERSION) {
+        memcpy(&metadata, fsb_map_view + sizeof(FSBHeader), sizeof(metadata));
+    }
+
+    const uint8_t* rows = fsb_map_view + rows_offset;
     for (uint32_t i = 0; i < out_header->zone_count; ++i) {
         if (is_v1) {
             FSBZoneEntryV1 v1;
@@ -109,6 +154,9 @@ bool fsb_load_headers(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHea
         }
     }
 
+    if (!fsb_metadata_fits(metadata, *out_header, out_zones, rows_end, fsb_map_size)) return false;
+    if (metadata.size > 0 && !out_metadata) return false;
+    if (out_metadata) *out_metadata = metadata;
     return true;
 }
 

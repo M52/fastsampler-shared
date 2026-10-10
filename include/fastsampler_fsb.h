@@ -12,9 +12,21 @@
 #include "fastsampler_format_limits.h"
 
 #define FSB_MAGIC 0x31425346
-#define FSB_VERSION 2
 
+// =============================================================================
+// Writers write version 3: the rows of version 2 after a span that records
+// where a metadata block lies. A bank does not need to have metadata.
+// =============================================================================
+#define FSB_VERSION 3
+
+// =============================================================================
+// Older versions that readers still read. Version 2 has no metadata span, and
+// version 1 has the older row layout.
+// =============================================================================
+#define FSB_VERSION_SHARED_SAMPLES 2
 #define FSB_VERSION_PER_ZONE 1
+
+#define FSB_MAX_METADATA_SIZE 65536
 
 #define FSB_MIN_SAMPLE_RATE 8000
 #define FSB_MAX_SAMPLE_RATE 384000
@@ -38,6 +50,16 @@ struct FSBHeader {
     uint64_t preload_offset;
     uint64_t preload_size;
     uint32_t bps;
+};
+
+// =============================================================================
+// Version 3 stores this between the header and the rows. A size of 0 means
+// that the bank has no metadata, and then the offset is 0 too. This format
+// does not define what the block holds.
+// =============================================================================
+struct FSBMetadataSpan {
+    uint64_t offset;
+    uint64_t size;
 };
 
 // =============================================================================
@@ -80,7 +102,20 @@ struct FSBZoneEntry {
 };
 #pragma pack(pop)
 
+// =============================================================================
+// Refuses a bank that carries metadata: a caller that does not handle the
+// block must not use such a bank.
+// =============================================================================
 bool fsb_load_headers(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header, FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count);
+
+// =============================================================================
+// Also reads a bank that carries metadata, and gives where its block lies.
+// out_metadata is all zeros for a bank without metadata. With out_metadata
+// null this is fsb_load_headers.
+// =============================================================================
+bool fsb_load_headers_with_metadata(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header,
+                                    FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count,
+                                    FSBMetadataSpan* out_metadata);
 
 // =============================================================================
 // out_bases needs one entry per possible sample index.
@@ -95,6 +130,13 @@ inline uint32_t fsb_bytes_per_sample(uint32_t bps) {
 }
 
 // =============================================================================
+// The rows follow the header, and in version 3 the metadata span.
+// =============================================================================
+inline uint64_t fsb_rows_offset(uint32_t version) {
+    return sizeof(FSBHeader) + (version == FSB_VERSION ? sizeof(FSBMetadataSpan) : 0);
+}
+
+// =============================================================================
 // Derive frame count from the preload block size because zone rows can
 // overlap.
 // =============================================================================
@@ -105,5 +147,6 @@ inline uint64_t fsb_preload_total_frames(const FSBHeader& header) {
 }
 
 static_assert(sizeof(FSBHeader) == 44, "FSB header layout changed");
+static_assert(sizeof(FSBMetadataSpan) == 16, "FSB metadata span layout changed");
 static_assert(sizeof(FSBZoneEntryV1) == 104, "FSB v1 row layout changed");
 static_assert(sizeof(FSBZoneEntry) == 128, "FSB v2 row layout changed");

@@ -101,8 +101,9 @@ void fs_banks_facts_to_entry(const FsBankFacts* facts, struct _FSIBank* entry);
 
 // =============================================================================
 // The header and rows as the bank stores them: 44 bytes plus 104 bytes per row
-// for version 1, or 128 bytes per row for version 2. The digest functions need
-// a header that fsb_load_headers accepted for this view.
+// for version 1, 44 bytes plus 128 bytes per row for version 2, or 60 bytes,
+// with the metadata span, plus 128 bytes per row for version 3. The digest
+// functions need a header that fsb_load_headers accepted for this view.
 // =============================================================================
 uint64_t fs_banks_table_bytes(const FSBHeader* header);
 uint64_t fs_banks_table_digest(const uint8_t* view, const FSBHeader* header);
@@ -140,6 +141,19 @@ uint32_t fs_banks_describe(const uint8_t* view, uint64_t size, FSBHeader* out_he
 uint32_t fs_banks_check_bank(const FsBankFacts* expect, const uint8_t* view, uint64_t size,
                              FSBHeader* out_header, FSBZoneEntry* out_rows, uint32_t max_rows,
                              uint32_t* out_row);
+
+// =============================================================================
+// fs_banks_describe and fs_banks_check_bank refuse a bank that carries
+// metadata, as fsb_load_headers does. These also accept it, and give where its
+// block lies, all zeros for a bank without metadata. With out_metadata null
+// they are the functions above.
+// =============================================================================
+uint32_t fs_banks_describe_with_metadata(const uint8_t* view, uint64_t size, FSBHeader* out_header,
+                                         FSBZoneEntry* out_rows, uint32_t max_rows, FsBankFacts* out_facts,
+                                         uint32_t* out_row, FSBMetadataSpan* out_metadata);
+uint32_t fs_banks_check_bank_with_metadata(const FsBankFacts* expect, const uint8_t* view, uint64_t size,
+                                           FSBHeader* out_header, FSBZoneEntry* out_rows, uint32_t max_rows,
+                                           uint32_t* out_row, FSBMetadataSpan* out_metadata);
 
 // =============================================================================
 // A lower-case sentence for a problem code.

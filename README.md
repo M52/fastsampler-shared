@@ -6,13 +6,13 @@ checks them.
 | Format | Contents | Encoding |
 | --- | --- | --- |
 | FSI | Instrument: zones, collections, effects, routing, sample bank manifests, source records | Protobuf with an `FSIP` header |
-| FSB | Sample bank: a table of rows, a preload block of PCM frames, and WavPack streams | Packed binary, version 2; version 1 is still read |
+| FSB | Sample bank: a table of rows, a preload block of PCM frames, WavPack streams, and optional metadata | Packed binary, version 3; versions 1 and 2 are still read |
 | FSP | Waveform peak cache, one entry per zone | Protobuf with an `FSPP` header |
 | SMFP | Spectral fingerprints of the zones of one collection | Fixed binary records, version 4 |
 
 All binary values are little-endian. The format release is
 `FASTSAMPLER_FORMATS_RELEASE` in `include/fastsampler_formats.h`, currently
-1.2.0. It is independent of the version numbers inside the files.
+1.3.0. It is independent of the version numbers inside the files.
 
 ## Using the code
 
@@ -107,7 +107,8 @@ that does not know `purged` loads every bank.
 
 The digests are XXH64 with seed 0. `table_digest` covers the FSB header and
 rows as the bank stores them: 44 bytes, plus 104 bytes for each row of a
-version 1 bank or 128 bytes for each row of a version 2 bank. `preload_digest`
+version 1 bank or 128 bytes for each row of a version 2 bank. A version 3 bank
+adds its 16-byte metadata span after the header. `preload_digest`
 covers the whole frames of the preload block, from `preload_offset`. The table
 digest includes the stream offsets, so a bank that is compressed again does not
 match its `.fsi`.
@@ -254,14 +255,15 @@ fingerprint in the rest of the file before treating a sample as different.
 ## FSB
 
 An FSB file holds the audio of one sample bank. It starts with a header and a
-table of rows, followed by a preload block and the streams.
+table of rows, followed by a preload block and the streams. A version 3 bank
+can also hold a metadata block.
 
 Header, 44 bytes:
 
 | Offset | Type | Field |
 | --- | --- | --- |
 | 0 | u32 | `magic`: `FSB1` (0x31425346) |
-| 4 | u32 | `version`: 2, or 1 for the older row layout |
+| 4 | u32 | `version`: 3. Readers also read 2, which has no metadata span, and 1, which has the older row layout |
 | 8 | u32 | `sample_rate`: 8000 to 384000 |
 | 12 | u32 | `channels`: 1 or 2 |
 | 16 | u32 | `preload_frames`: the preload length the bank was written with. 0xFFFFFFFF means every sample is resident in full |
@@ -270,7 +272,17 @@ Header, 44 bytes:
 | 32 | u64 | `preload_size`: size of the preload block in bytes |
 | 40 | u32 | `bps`: 16 or 24 |
 
-Version 2 row, 128 bytes, `zone_count` times after the header:
+Version 3 metadata span, 16 bytes, after the header:
+
+| Offset | Type | Field |
+| --- | --- | --- |
+| 44 | u64 | `offset`: file offset of the metadata block |
+| 52 | u64 | `size`: size of the metadata block in bytes, at most 65536 (`FSB_MAX_METADATA_SIZE`). 0 means the bank has no metadata, and then `offset` is 0 too |
+
+This format does not define what the metadata block holds.
+
+Version 2 and 3 row, 128 bytes, `zone_count` times after the header, and in
+version 3 after the metadata span:
 
 | Offset | Type | Field |
 | --- | --- | --- |
@@ -309,12 +321,19 @@ A reader refuses a bank when:
 - `sample_frame_offset + total_frames` exceeds `sample_frames`, or
   `stream_first_frame` exceeds `sample_frames`.
 - A zone that needs its stream starts before `stream_first_frame`.
+- A metadata block is larger than 65536 bytes, starts before the end of the
+  rows, lies outside the file, or overlaps the preload block or a stream.
 
 Version 1 rows are 104 bytes: `name`, then `preload_frame_offset`,
 `preload_frame_count`, `stream_offset`, `stream_size` and `total_frames`, each
 a u64. Each row is its own stored sample, the preload regions follow each other
 without gaps or overlap, and the stream starts after the preload.
-`fsb_load_headers` reads both versions into the version 2 row layout.
+`fsb_load_headers` reads every version into the version 2 row layout.
+
+A reader that does not handle metadata must not use a bank that carries it.
+`fsb_load_headers`, `fs_banks_describe` and `fs_banks_check_bank` refuse such
+a bank. Their `_with_metadata` variants also accept it and give where the
+block lies.
 
 ## FSP
 

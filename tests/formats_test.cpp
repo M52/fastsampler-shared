@@ -34,6 +34,70 @@ static bool fill_largest(const pb_msgdesc_t* fields, void* message) {
     return true;
 }
 
+// A version 3 bank with one mono 16-bit zone of 8 frames, 4 of them in the
+// preload block and 4 in a stream, then room for 10 bytes of metadata. The row
+// starts after the span at 60, the preload block at 188, the stream at 196 and
+// the room at 202.
+static std::vector<unsigned char> make_metadata_bank(FSBMetadataSpan span) {
+    std::vector<unsigned char> bank(212, 0x6D);
+    FSBHeader h = {};
+    h.magic = FSB_MAGIC; h.version = FSB_VERSION; h.sample_rate = 44100;
+    h.channels = 1; h.bps = 16; h.zone_count = 1; h.preload_frames = 4;
+    h.preload_offset = 188; h.preload_size = 8;
+    FSBZoneEntry z = {};
+    std::strcpy(z.name, "sample");
+    z.preload_frame_count = 4; z.total_frames = 8; z.sample_frames = 8; z.stream_first_frame = 4;
+    z.stream_offset = 196; z.stream_size = 6;
+    std::memcpy(bank.data(), &h, sizeof(h));
+    std::memcpy(bank.data() + sizeof(h), &span, sizeof(span));
+    std::memcpy(bank.data() + 60, &z, sizeof(z));
+    return bank;
+}
+
+static bool load_metadata_bank(FSBMetadataSpan span, FSBMetadataSpan* out) {
+    std::vector<unsigned char> bank = make_metadata_bank(span);
+    FSBHeader h = {};
+    FSBZoneEntry row = {};
+    return fsb_load_headers_with_metadata(bank.data(), bank.size(), &h, &row, 1, 1, out);
+}
+
+static int check_metadata_banks() {
+    CHECK(fsb_rows_offset(FSB_VERSION_PER_ZONE) == 44 && fsb_rows_offset(FSB_VERSION_SHARED_SAMPLES) == 44);
+    CHECK(fsb_rows_offset(FSB_VERSION) == 60 && sizeof(FSBMetadataSpan) == 16);
+
+    // Without metadata, both readers take a version 3 bank and find its row
+    // after the span.
+    std::vector<unsigned char> plain = make_metadata_bank({0, 0});
+    FSBHeader h = {};
+    FSBZoneEntry row = {};
+    FSBMetadataSpan span = {7, 7};
+    CHECK(fsb_load_headers(plain.data(), plain.size(), &h, &row, 1, 1));
+    CHECK(h.version == FSB_VERSION && std::strcmp(row.name, "sample") == 0 && row.stream_offset == 196);
+    CHECK(fsb_load_headers_with_metadata(plain.data(), plain.size(), &h, &row, 1, 1, &span));
+    CHECK(span.offset == 0 && span.size == 0);
+
+    // With metadata, only a reader that asks for the block takes the bank.
+    std::vector<unsigned char> carried = make_metadata_bank({202, 10});
+    CHECK(!fsb_load_headers(carried.data(), carried.size(), &h, &row, 1, 1));
+    CHECK(!fsb_load_headers_with_metadata(carried.data(), carried.size(), &h, &row, 1, 1, nullptr));
+    CHECK(fsb_load_headers_with_metadata(carried.data(), carried.size(), &h, &row, 1, 1, &span));
+    CHECK(span.offset == 202 && span.size == 10);
+
+    // The block lies after the rows, inside the file, apart from the preload
+    // block and the stream, and holds at most FSB_MAX_METADATA_SIZE bytes.
+    CHECK(load_metadata_bank({202, 4}, &span) && load_metadata_bank({208, 4}, &span));
+    CHECK(!load_metadata_bank({5, 0}, &span));
+    CHECK(!load_metadata_bank({50, 4}, &span));
+    CHECK(!load_metadata_bank({100, 4}, &span));
+    CHECK(!load_metadata_bank({190, 4}, &span));
+    CHECK(!load_metadata_bank({200, 4}, &span));
+    CHECK(!load_metadata_bank({202, 11}, &span));
+    CHECK(!load_metadata_bank({UINT64_MAX - 3, 8}, &span));
+    CHECK(!load_metadata_bank({202, FSB_MAX_METADATA_SIZE + 1}, &span));
+    CHECK(span.offset == 0 && span.size == 0);
+    return 0;
+}
+
 int main() {
     // An independently specified wire fixture protects field numbers and types.
     unsigned char wire[] = {0x0a, 1, 'x', 0x12, 5, 'x', '.', 'f', 's', 'b'};
@@ -166,7 +230,7 @@ int main() {
     static_assert(FSI_MAX_BANKS == 8 && FSI_MAX_BANKS == sizeof(FSIFile::banks) / sizeof(FSIBank),
                   "the banks capacity is FSI_MAX_BANKS");
     static_assert(FSI_BANK_ID_IMPLICIT == 1 && FSI_BANK_BUS_NONE == 0xFF, "bank constants");
-    CHECK(std::strcmp(FASTSAMPLER_FORMATS_RELEASE, "1.2.0") == 0);
+    CHECK(std::strcmp(FASTSAMPLER_FORMATS_RELEASE, "1.3.0") == 0);
 
     // The stated maximum sizes are the encoded sizes of the largest messages.
     size_t largest = 0;
@@ -206,11 +270,15 @@ int main() {
         FSBHeader actual = {}; FSBZoneEntry row = {};
         CHECK(fsb_load_headers(bank.data(), bank.size(), &actual, &row, 1, 1));
         CHECK(row.total_frames == 4 && row.sample_frames == 4);
+        FSBMetadataSpan span = {7, 7};
+        CHECK(fsb_load_headers_with_metadata(bank.data(), bank.size(), &actual, &row, 1, 1, &span));
+        CHECK(span.offset == 0 && span.size == 0);
         uint64_t base = 99;
         CHECK(fsb_ram_only_sample_bases(&row, 1, 4, &base) && base == 0);
         bank[0] = 0;
         CHECK(!fsb_load_headers(bank.data(), bank.size(), &actual, &row, 1, 1));
     }
+    CHECK(check_metadata_banks() == 0);
 
     std::vector<float> lo(ZONE_PEAK_CACHE_POINTS * 2), hi(lo.size()), read_lo(lo.size()), read_hi(lo.size());
     for (size_t i = 0; i < lo.size(); ++i) { lo[i] = -(float)i / 4096; hi[i] = (float)i / 4096; }
