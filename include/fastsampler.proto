@@ -82,6 +82,13 @@ message FSIFile {
     // banks it is 2 or more, and absence means 2.
     // =============================================================================
     optional uint32 next_bank_id = 20;
+
+    // =============================================================================
+    // The impulse response files that convolution effects play, relative to
+    // the folder of the .fsi when they are in or below it. An effect names
+    // one by its position here.
+    // =============================================================================
+    repeated string impulse_responses = 21;
 }
 
 // =============================================================================
@@ -355,6 +362,8 @@ message FSIInstrumentFX {
     repeated float compressor_params = 65;
     optional bool stutter_enabled = 66;
     repeated float stutter_params = 67;
+    optional bool convolution_enabled = 68;
+    repeated float convolution_params = 69;
 }
 
 message FSIModulator {

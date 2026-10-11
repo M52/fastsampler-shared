@@ -116,8 +116,8 @@ int main() {
 
     static_assert(COLLECTION_FX_SV_NOTCH == 29 && COLLECTION_FX_STUTTER == 37 &&
                   COLLECTION_FX_TYPE_COUNT == 38, "Persisted IDs must not move");
-    static_assert(BUS_FX_NOTCH == 11 && BUS_FX_COMPRESSOR == 19 && BUS_FX_STUTTER == 20 &&
-                  BUS_FX_TYPE_COUNT == 21, "Persisted IDs must not move");
+    static_assert(BUS_FX_NOTCH == 11 && BUS_FX_COMPRESSOR == 19 && BUS_FX_STUTTER == 20,
+                  "Persisted IDs must not move");
     static_assert(DELAY_SYNC == 5 && DELAY_NOTE == 6 && DELAY_PARAM_COUNT == 7, "Parameter slots must not move");
     static_assert(COMPRESSOR_PARAM_COUNT <= MAX_BFX_PARAMS && DELAY_PARAM_COUNT <= MAX_BFX_PARAMS,
                   "Bus inserts store at most MAX_BFX_PARAMS parameters");
@@ -147,6 +147,38 @@ int main() {
           more_back.compressor_params[COMPRESSOR_AUTO_BYPASS] == 1.0f);
     CHECK(more_back.has_stutter_enabled && !more_back.stutter_enabled && more_back.stutter_params[STUTTER_MIX] == 0.5f);
     CHECK(!more_back.has_notch_enabled && more_back.notch_params_count == 0);
+
+    static_assert(BUS_FX_CONVOLUTION == 21 && BUS_FX_TYPE_COUNT == 22 && CONVOLUTION_PARAM_COUNT == 2,
+                  "Persisted IDs must not move");
+    static_assert(FSI_MAX_IMPULSE_RESPONSES == sizeof(FSIFile::impulse_responses) / sizeof(FSIFile::impulse_responses[0]),
+                  "the impulse response capacity is FSI_MAX_IMPULSE_RESPONSES");
+    FSIInstrumentFX conv = FSIInstrumentFX_init_zero;
+    conv.has_convolution_enabled = conv.convolution_enabled = true;
+    conv.convolution_params_count = CONVOLUTION_PARAM_COUNT;
+    conv.convolution_params[CONVOLUTION_IR] = 2.0f;
+    unsigned char conv_wire[64]{};
+    pb_ostream_t conv_out = pb_ostream_from_buffer(conv_wire, sizeof(conv_wire));
+    CHECK(pb_encode(&conv_out, FSIInstrumentFX_fields, &conv));
+    FSIInstrumentFX conv_back = FSIInstrumentFX_init_default;
+    pb_istream_t conv_in = pb_istream_from_buffer(conv_wire, conv_out.bytes_written);
+    CHECK(pb_decode(&conv_in, FSIInstrumentFX_fields, &conv_back));
+    CHECK(conv_back.convolution_enabled && conv_back.convolution_params[CONVOLUTION_IR] == 2.0f);
+
+    auto with_irs = std::make_unique<FSIFile>();
+    std::memset(with_irs.get(), 0, sizeof(FSIFile));
+    std::strcpy(with_irs->instrument_name, "x");
+    std::strcpy(with_irs->fsb_path, "x.fsb");
+    with_irs->impulse_responses_count = 2;
+    std::strcpy(with_irs->impulse_responses[0], "Hall.wav");
+    std::strcpy(with_irs->impulse_responses[1], "irs/Room 2.aif");
+    std::vector<unsigned char> irs_wire(4096);
+    pb_ostream_t irs_out = pb_ostream_from_buffer(irs_wire.data(), irs_wire.size());
+    CHECK(pb_encode(&irs_out, FSIFile_fields, with_irs.get()));
+    auto irs_back = std::make_unique<FSIFile>();
+    std::memset(irs_back.get(), 0, sizeof(FSIFile));
+    pb_istream_t irs_in = pb_istream_from_buffer(irs_wire.data(), irs_out.bytes_written);
+    CHECK(pb_decode(&irs_in, FSIFile_fields, irs_back.get()));
+    CHECK(irs_back->impulse_responses_count == 2 && std::strcmp(irs_back->impulse_responses[1], "irs/Room 2.aif") == 0);
     // An independently specified wire fixture protects field numbers and types.
     unsigned char wire[] = {0x0a, 1, 'x', 0x12, 5, 'x', '.', 'f', 's', 'b'};
     auto message = std::make_unique<FSIFile>();

@@ -397,7 +397,8 @@ enum BusFXType {
     BUS_FX_STEREO_SIMULATOR = 17,
     BUS_FX_BIT_CRUSHER = 18,
     BUS_FX_COMPRESSOR = 19,
-    BUS_FX_STUTTER = 20
+    BUS_FX_STUTTER = 20,
+    BUS_FX_CONVOLUTION = 21
 };
 
 // Bus and instrument parameters start at zero. Collection parameters use
@@ -475,6 +476,13 @@ enum CompressorParams {
 
 enum StutterParams { STUTTER_AMOUNT = 0, STUTTER_MIX = 1, STUTTER_PARAM_COUNT = 2 };
 
+// =============================================================================
+// The impulse response is a position in the instrument's list of impulse
+// response files. Convolution is a bus and instrument effect only: on a
+// collection every voice would run a convolution of its own.
+// =============================================================================
+enum ConvolutionParams { CONVOLUTION_MIX = 0, CONVOLUTION_IR = 1, CONVOLUTION_PARAM_COUNT = 2 };
+
 #define DELAY_NOTE_COUNT 25
 #define STEREO_SIM_ALGORITHM_COUNT 3
 
@@ -551,4 +559,4 @@ enum BFX_GainParams {
 
 #define MAX_BFX_PARAMS 8
 
-#define BUS_FX_TYPE_COUNT 21
+#define BUS_FX_TYPE_COUNT 22

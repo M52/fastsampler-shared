@@ -29,6 +29,8 @@
 // leaves authoring_bus out.
 #define FSI_BANK_BUS_NONE 0xFFu
 #define FS_FORMAT_PATH_LENGTH 260
+// The impulse responses one instrument can list for its convolution effects.
+#define FSI_MAX_IMPULSE_RESPONSES 8
 #define COLLECTION_LINK_MAX_RULE 255
 #define CFX_RR_MODE_SEQUENCE 0
 #define CFX_RR_MODE_RANDOM 1
