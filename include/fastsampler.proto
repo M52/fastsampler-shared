@@ -331,6 +331,10 @@ message FSIInstrumentFX {
     optional float seo_start_ms = 41;
     optional bool seo_end_enabled = 42;
     optional float seo_end_ms = 43;
+    optional bool chorus_enabled = 44;
+    repeated float chorus_params = 45;
+    optional bool delay_enabled = 46;
+    repeated float delay_params = 47;
 }
 
 message FSIModulator {

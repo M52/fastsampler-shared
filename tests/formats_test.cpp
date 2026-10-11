@@ -90,6 +90,29 @@ static int check_provenance_banks() {
 }
 
 int main() {
+    static_assert(COLLECTION_FX_SIMULATED_LEGATO == 26 && COLLECTION_FX_CHORUS == 27 &&
+                  COLLECTION_FX_DELAY == 28 && BUS_FX_GAIN == 1, "Persisted IDs must not move");
+    FSIInstrumentFX effect = FSIInstrumentFX_init_zero;
+    effect.has_chorus_enabled = effect.chorus_enabled = true;
+    effect.has_delay_enabled = effect.delay_enabled = true;
+    effect.chorus_params_count = 3;
+    effect.delay_params_count = 5;
+    effect.chorus_params[0] = 0.4f;
+    effect.delay_params[0] = 0.75f;
+    effect.delay_params[4] = 12000.0f;
+    unsigned char fx_wire[256]{};
+    pb_ostream_t fx_out = pb_ostream_from_buffer(fx_wire, sizeof(fx_wire));
+    CHECK(pb_encode(&fx_out, FSIInstrumentFX_fields, &effect));
+    FSIInstrumentFX restored = FSIInstrumentFX_init_default;
+    pb_istream_t fx_in = pb_istream_from_buffer(fx_wire, fx_out.bytes_written);
+    CHECK(pb_decode(&fx_in, FSIInstrumentFX_fields, &restored));
+    CHECK(restored.chorus_enabled && restored.delay_enabled);
+    CHECK(restored.chorus_params_count == 3 && restored.delay_params_count == 5);
+    CHECK(restored.chorus_params[0] == 0.4f && restored.delay_params[4] == 12000.0f);
+    fx_in = pb_istream_from_buffer(fx_wire, 0);
+    CHECK(pb_decode(&fx_in, FSIInstrumentFX_fields, &restored));
+    CHECK(!restored.has_chorus_enabled && !restored.has_delay_enabled);
+    CHECK(restored.chorus_params_count == 0 && restored.delay_params_count == 0);
     // An independently specified wire fixture protects field numbers and types.
     unsigned char wire[] = {0x0a, 1, 'x', 0x12, 5, 'x', '.', 'f', 's', 'b'};
     auto message = std::make_unique<FSIFile>();
