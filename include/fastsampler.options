@@ -30,6 +30,8 @@ FSIInstrumentFX.lfo_waveform    max_count:4
 FSIInstrumentFX.lfo_rate        max_count:4
 FSIInstrumentFX.lfo_depth       max_count:4
 FSIInstrumentFX.lfo_curve       max_count:512
+FSIInstrumentFX.chorus_params   max_count:3
+FSIInstrumentFX.delay_params    max_count:5
 
 FSIModulator.curve_indices      max_count:4
 FSIModulator.params             max_count:16

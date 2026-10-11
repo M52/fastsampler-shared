@@ -33,7 +33,9 @@ enum CollectionFXType {
     COLLECTION_FX_PANNER = 23,
     COLLECTION_FX_COMPRESSOR = 24,
     COLLECTION_FX_SMART_RELEASE = 25,
-    COLLECTION_FX_SIMULATED_LEGATO = 26
+    COLLECTION_FX_SIMULATED_LEGATO = 26,
+    COLLECTION_FX_CHORUS = 27,
+    COLLECTION_FX_DELAY = 28
 };
 
 enum CFX_GainParams {
@@ -367,8 +369,26 @@ enum CFX_LegatoParams {
 
 enum BusFXType {
     BUS_FX_NONE = 0,
-    BUS_FX_GAIN = 1
+    BUS_FX_GAIN = 1,
+    BUS_FX_CHORUS = 2,
+    BUS_FX_DELAY = 3,
+    BUS_FX_LP1 = 4,
+    BUS_FX_LP2 = 5,
+    BUS_FX_HP2 = 6,
+    BUS_FX_BP2 = 7,
+    BUS_FX_PEAK = 8,
+    BUS_FX_LOW_SHELF = 9,
+    BUS_FX_HIGH_SHELF = 10
 };
+
+// Bus and instrument parameters start at zero. Collection parameters use
+// these same slots plus one, after Strength. Time and stereo offset are seconds.
+enum ChorusParams { CHORUS_MIX = 0, CHORUS_DEPTH = 1, CHORUS_RATE = 2, CHORUS_PARAM_COUNT = 3 };
+enum DelayParams {
+    DELAY_TIME = 0, DELAY_FEEDBACK = 1, DELAY_WET = 2,
+    DELAY_STEREO_OFFSET = 3, DELAY_CUTOFF = 4, DELAY_PARAM_COUNT = 5
+};
+enum BFX_FilterParams { BFX_FILTER_FREQUENCY = 0, BFX_FILTER_Q = 1, BFX_FILTER_GAIN_DB = 2 };
 
 enum BFX_GainParams {
     BFX_GAIN_LEVEL_DB = 0,
@@ -381,7 +401,7 @@ enum BFX_GainParams {
 
 #define MAX_FX_PARAMS           32
 
-#define COLLECTION_FX_TYPE_COUNT 27
+#define COLLECTION_FX_TYPE_COUNT 29
 
 #define CFX_STRENGTH 0
 
@@ -443,4 +463,4 @@ enum BFX_GainParams {
 
 #define MAX_BFX_PARAMS 8
 
-#define BUS_FX_TYPE_COUNT 2
+#define BUS_FX_TYPE_COUNT 11
