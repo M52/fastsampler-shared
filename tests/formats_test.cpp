@@ -34,67 +34,58 @@ static bool fill_largest(const pb_msgdesc_t* fields, void* message) {
     return true;
 }
 
-// A version 3 bank with one mono 16-bit zone of 8 frames, 4 of them in the
-// preload block and 4 in a stream, then room for 10 bytes of metadata. The row
-// starts after the span at 60, the preload block at 188, the stream at 196 and
-// the room at 202.
-static std::vector<unsigned char> make_metadata_bank(FSBMetadataSpan span) {
-    std::vector<unsigned char> bank(212, 0x6D);
+// A structurally valid encrypted record, without needing a private key.
+static std::vector<unsigned char> make_provenance_bank(uint32_t count) {
+    uint64_t rows_at = fsb_rows_offset(FSB_VERSION, count);
+    std::vector<unsigned char> bank((size_t)(rows_at + sizeof(FSBZoneEntry) + 14), 0);
     FSBHeader h = {};
     h.magic = FSB_MAGIC; h.version = FSB_VERSION; h.sample_rate = 44100;
     h.channels = 1; h.bps = 16; h.zone_count = 1; h.preload_frames = 4;
-    h.preload_offset = 188; h.preload_size = 8;
+    h.preload_offset = rows_at + sizeof(FSBZoneEntry); h.preload_size = 8;
     FSBZoneEntry z = {};
     std::strcpy(z.name, "sample");
     z.preload_frame_count = 4; z.total_frames = 8; z.sample_frames = 8; z.stream_first_frame = 4;
-    z.stream_offset = 196; z.stream_size = 6;
+    z.stream_offset = h.preload_offset + 8; z.stream_size = 6;
     std::memcpy(bank.data(), &h, sizeof(h));
-    std::memcpy(bank.data() + sizeof(h), &span, sizeof(span));
-    std::memcpy(bank.data() + 60, &z, sizeof(z));
+    FSBProvenanceHeader ph = fsb_provenance_header(count);
+    std::memcpy(bank.data() + sizeof(h), &ph, sizeof(ph));
+    for (uint32_t i = 0; i < count; ++i) {
+        FSBProvenanceRecord r{};
+        r.version = FSB_PROVENANCE_VERSION; r.algorithm = FSB_PROVENANCE_ALGORITHM;
+        std::strcpy(r.key_id, FSB_PROVENANCE_KEY_ID); r.ephemeral_public_key[0] = 9;
+        r.nonce[0] = (uint8_t)i;
+        std::memcpy(bank.data() + sizeof(h) + sizeof(ph) + i * sizeof(r), &r, sizeof(r));
+    }
+    std::memcpy(bank.data() + rows_at, &z, sizeof(z));
     return bank;
 }
 
-static bool load_metadata_bank(FSBMetadataSpan span, FSBMetadataSpan* out) {
-    std::vector<unsigned char> bank = make_metadata_bank(span);
-    FSBHeader h = {};
-    FSBZoneEntry row = {};
-    return fsb_load_headers_with_metadata(bank.data(), bank.size(), &h, &row, 1, 1, out);
-}
-
-static int check_metadata_banks() {
+static int check_provenance_banks() {
     CHECK(fsb_rows_offset(FSB_VERSION_PER_ZONE) == 44 && fsb_rows_offset(FSB_VERSION_SHARED_SAMPLES) == 44);
-    CHECK(fsb_rows_offset(FSB_VERSION) == 60 && sizeof(FSBMetadataSpan) == 16);
-
-    // Without metadata, both readers take a version 3 bank and find its row
-    // after the span.
-    std::vector<unsigned char> plain = make_metadata_bank({0, 0});
-    FSBHeader h = {};
-    FSBZoneEntry row = {};
-    FSBMetadataSpan span = {7, 7};
-    CHECK(fsb_load_headers(plain.data(), plain.size(), &h, &row, 1, 1));
-    CHECK(h.version == FSB_VERSION && std::strcmp(row.name, "sample") == 0 && row.stream_offset == 196);
-    CHECK(fsb_load_headers_with_metadata(plain.data(), plain.size(), &h, &row, 1, 1, &span));
-    CHECK(span.offset == 0 && span.size == 0);
-
-    // With metadata, only a reader that asks for the block takes the bank.
-    std::vector<unsigned char> carried = make_metadata_bank({202, 10});
-    CHECK(!fsb_load_headers(carried.data(), carried.size(), &h, &row, 1, 1));
-    CHECK(!fsb_load_headers_with_metadata(carried.data(), carried.size(), &h, &row, 1, 1, nullptr));
-    CHECK(fsb_load_headers_with_metadata(carried.data(), carried.size(), &h, &row, 1, 1, &span));
-    CHECK(span.offset == 202 && span.size == 10);
-
-    // The block lies after the rows, inside the file, apart from the preload
-    // block and the stream, and holds at most FSB_MAX_METADATA_SIZE bytes.
-    CHECK(load_metadata_bank({202, 4}, &span) && load_metadata_bank({208, 4}, &span));
-    CHECK(!load_metadata_bank({5, 0}, &span));
-    CHECK(!load_metadata_bank({50, 4}, &span));
-    CHECK(!load_metadata_bank({100, 4}, &span));
-    CHECK(!load_metadata_bank({190, 4}, &span));
-    CHECK(!load_metadata_bank({200, 4}, &span));
-    CHECK(!load_metadata_bank({202, 11}, &span));
-    CHECK(!load_metadata_bank({UINT64_MAX - 3, 8}, &span));
-    CHECK(!load_metadata_bank({202, FSB_MAX_METADATA_SIZE + 1}, &span));
-    CHECK(span.offset == 0 && span.size == 0);
+    CHECK(fsb_rows_offset(FSB_VERSION) == 2220);
+    FSBHeader h{}; FSBZoneEntry row{}; FSBProvenanceView provenance{};
+    for (uint32_t count : {1u, 2u, FSB_PROVENANCE_MAX_RECORDS}) {
+        auto bank = make_provenance_bank(count);
+        CHECK(fsb_load_headers(bank.data(), bank.size(), &h, &row, 1, 1));
+        CHECK(fsb_read_provenance(bank.data(), bank.size(), &provenance) && provenance.count == count);
+        CHECK(std::strcmp(row.name, "sample") == 0 && row.stream_offset == h.preload_offset + 8);
+        CHECK(!fsb_load_headers(bank.data(), fsb_rows_offset(FSB_VERSION, count) - 1, &h, &row, 1, 1));
+    }
+    auto invalid = make_provenance_bank(0);
+    CHECK(!fsb_load_headers(invalid.data(), invalid.size(), &h, &row, 1, 1));
+    for (size_t offset : {size_t(44), size_t(48), size_t(52), size_t(56), size_t(60), size_t(64)}) {
+        auto bank = make_provenance_bank(1);
+        bank[offset] ^= 0xff;
+        CHECK(!fsb_load_headers(bank.data(), bank.size(), &h, &row, 1, 1));
+    }
+    auto bank = make_provenance_bank(1);
+    std::memset(bank.data() + 68, 'x', 32); // unterminated key ID
+    CHECK(!fsb_load_headers(bank.data(), bank.size(), &h, &row, 1, 1));
+    bank = make_provenance_bank(1);
+    std::memcpy(&h, bank.data(), sizeof(h));
+    ++h.preload_offset;
+    std::memcpy(bank.data(), &h, sizeof(h));
+    CHECK(!fsb_load_headers(bank.data(), bank.size(), &h, &row, 1, 1));
     return 0;
 }
 
@@ -230,7 +221,7 @@ int main() {
     static_assert(FSI_MAX_BANKS == 8 && FSI_MAX_BANKS == sizeof(FSIFile::banks) / sizeof(FSIBank),
                   "the banks capacity is FSI_MAX_BANKS");
     static_assert(FSI_BANK_ID_IMPLICIT == 1 && FSI_BANK_BUS_NONE == 0xFF, "bank constants");
-    CHECK(std::strcmp(FASTSAMPLER_FORMATS_RELEASE, "1.3.0") == 0);
+    CHECK(std::strcmp(FASTSAMPLER_FORMATS_RELEASE, "1.4.0") == 0);
 
     // The stated maximum sizes are the encoded sizes of the largest messages.
     size_t largest = 0;
@@ -270,15 +261,15 @@ int main() {
         FSBHeader actual = {}; FSBZoneEntry row = {};
         CHECK(fsb_load_headers(bank.data(), bank.size(), &actual, &row, 1, 1));
         CHECK(row.total_frames == 4 && row.sample_frames == 4);
-        FSBMetadataSpan span = {7, 7};
-        CHECK(fsb_load_headers_with_metadata(bank.data(), bank.size(), &actual, &row, 1, 1, &span));
-        CHECK(span.offset == 0 && span.size == 0);
+        FSBProvenanceView provenance{};
+        CHECK(fsb_read_provenance(bank.data(), bank.size(), &provenance));
+        CHECK(provenance.count == 0 && provenance.records == nullptr);
         uint64_t base = 99;
         CHECK(fsb_ram_only_sample_bases(&row, 1, 4, &base) && base == 0);
         bank[0] = 0;
         CHECK(!fsb_load_headers(bank.data(), bank.size(), &actual, &row, 1, 1));
     }
-    CHECK(check_metadata_banks() == 0);
+    CHECK(check_provenance_banks() == 0);
 
     std::vector<float> lo(ZONE_PEAK_CACHE_POINTS * 2), hi(lo.size()), read_lo(lo.size()), read_hi(lo.size());
     for (size_t i = 0; i < lo.size(); ++i) { lo[i] = -(float)i / 4096; hi[i] = (float)i / 4096; }

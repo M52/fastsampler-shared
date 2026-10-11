@@ -24,6 +24,8 @@ cl %FLAGS% tests\smfp_analysis_test.cpp src\fastsampler_smfp.cpp src\fastsampler
 if errorlevel 1 exit /b 1
 cl %FLAGS% tests\banks_test.cpp src\fastsampler_banks.cpp src\fastsampler_fsb.cpp src\fastsampler_hash.cpp %BINDINGS% /Fo"build/" /Fe"build/banks_test.exe"
 if errorlevel 1 exit /b 1
+cl %FLAGS% tests\provenance_test.cpp src\fastsampler_provenance.cpp 3rdparty\monocypher\monocypher.c /Fo"build/" /Fe"build/provenance_test.exe"
+if errorlevel 1 exit /b 1
 pushd build
 .\formats_test.exe
 if errorlevel 1 goto failed
@@ -32,6 +34,8 @@ if errorlevel 1 goto failed
 .\smfp_analysis_test.exe
 if errorlevel 1 goto failed
 .\banks_test.exe
+if errorlevel 1 goto failed
+.\provenance_test.exe
 if errorlevel 1 goto failed
 popd
 exit /b 0

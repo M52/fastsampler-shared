@@ -232,6 +232,7 @@ void fs_banks_facts_to_entry(const FsBankFacts* facts, FSIBank* entry) {
 }
 
 uint64_t fs_banks_table_bytes(const FSBHeader* header) {
+    if (header->version == FSB_VERSION) return header->preload_offset;
     uint64_t row_size = header->version == FSB_VERSION_PER_ZONE ? sizeof(FSBZoneEntryV1) : sizeof(FSBZoneEntry);
     return fsb_rows_offset(header->version) + row_size * header->zone_count;
 }
@@ -288,14 +289,8 @@ uint32_t fs_banks_check_rows(const FSBHeader* header, const FSBZoneEntry* rows, 
 uint32_t fs_banks_describe(const uint8_t* view, uint64_t size, FSBHeader* out_header,
                            FSBZoneEntry* out_rows, uint32_t max_rows, FsBankFacts* out_facts,
                            uint32_t* out_row) {
-    return fs_banks_describe_with_metadata(view, size, out_header, out_rows, max_rows, out_facts, out_row, nullptr);
-}
-
-uint32_t fs_banks_describe_with_metadata(const uint8_t* view, uint64_t size, FSBHeader* out_header,
-                                         FSBZoneEntry* out_rows, uint32_t max_rows, FsBankFacts* out_facts,
-                                         uint32_t* out_row, FSBMetadataSpan* out_metadata) {
     if (out_row) *out_row = FS_BANKS_NONE;
-    if (!fsb_load_headers_with_metadata(view, size, out_header, out_rows, max_rows, 0, out_metadata))
+    if (!fsb_load_headers(view, size, out_header, out_rows, max_rows, 0))
         return FS_BANKS_ERR_FILE_HEADER;
     if (out_header->zone_count == 0) return FS_BANKS_ERR_FILE_ROWS;
     uint32_t code = fs_banks_check_rows(out_header, out_rows, out_row);
@@ -312,21 +307,14 @@ uint32_t fs_banks_describe_with_metadata(const uint8_t* view, uint64_t size, FSB
 uint32_t fs_banks_check_bank(const FsBankFacts* expect, const uint8_t* view, uint64_t size,
                              FSBHeader* out_header, FSBZoneEntry* out_rows, uint32_t max_rows,
                              uint32_t* out_row) {
-    return fs_banks_check_bank_with_metadata(expect, view, size, out_header, out_rows, max_rows, out_row, nullptr);
-}
-
-uint32_t fs_banks_check_bank_with_metadata(const FsBankFacts* expect, const uint8_t* view, uint64_t size,
-                                           FSBHeader* out_header, FSBZoneEntry* out_rows, uint32_t max_rows,
-                                           uint32_t* out_row, FSBMetadataSpan* out_metadata) {
     if (out_row) *out_row = FS_BANKS_NONE;
-    if (out_metadata) memset(out_metadata, 0, sizeof(*out_metadata));
     if (!view || size < sizeof(FSBHeader)) return FS_BANKS_ERR_FILE_HEADER;
     FSBHeader raw;
     memcpy(&raw, view, sizeof(raw));
     if (raw.magic != FSB_MAGIC) return FS_BANKS_ERR_FILE_HEADER;
     uint32_t row_count = expect->row_count;
     if (raw.zone_count != row_count || row_count == 0 || row_count > max_rows) return FS_BANKS_ERR_FILE_ROWS;
-    if (!fsb_load_headers_with_metadata(view, size, out_header, out_rows, row_count, row_count, out_metadata))
+    if (!fsb_load_headers(view, size, out_header, out_rows, row_count, row_count))
         return FS_BANKS_ERR_FILE_HEADER;
     uint32_t code = fs_banks_check_rows(out_header, out_rows, out_row);
     if (code != FS_BANKS_OK) return code;

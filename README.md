@@ -6,13 +6,13 @@ checks them.
 | Format | Contents | Encoding |
 | --- | --- | --- |
 | FSI | Instrument: zones, collections, effects, routing, sample bank manifests, source records | Protobuf with an `FSIP` header |
-| FSB | Sample bank: a table of rows, a preload block of PCM frames, WavPack streams, and optional metadata | Packed binary, version 3; versions 1 and 2 are still read |
+| FSB | Sample bank: encrypted provenance, a table of rows, a preload block of PCM frames, and WavPack streams | Packed binary, version 3; versions 1 and 2 are still read |
 | FSP | Waveform peak cache, one entry per zone | Protobuf with an `FSPP` header |
 | SMFP | Spectral fingerprints of the zones of one collection | Fixed binary records, version 4 |
 
 All binary values are little-endian. The format release is
 `FASTSAMPLER_FORMATS_RELEASE` in `include/fastsampler_formats.h`, currently
-1.3.0. It is independent of the version numbers inside the files.
+1.4.0. It is independent of the version numbers inside the files.
 
 ## Using the code
 
@@ -30,6 +30,7 @@ sources you need:
 | You read or write | Compile |
 | --- | --- |
 | FSB headers | `src/fastsampler_fsb.cpp` |
+| FSB provenance encryption or inspection | `src/fastsampler_provenance.cpp`, `3rdparty/monocypher/monocypher.c` |
 | FSP | `src/fastsampler_fsp.cpp` |
 | SMFP | `src/fastsampler_smfp.cpp` |
 | SMFP measurements | `src/fastsampler_smfp_analysis.cpp` |
@@ -108,7 +109,9 @@ that does not know `purged` loads every bank.
 The digests are XXH64 with seed 0. `table_digest` covers the FSB header and
 rows as the bank stores them: 44 bytes, plus 104 bytes for each row of a
 version 1 bank or 128 bytes for each row of a version 2 bank. A version 3 bank
-adds its 16-byte metadata span after the header. `preload_digest`
+includes its provenance header and encrypted records before the rows. Its
+preload starts immediately after the rows, and its table digest covers all
+bytes before `preload_offset`. `preload_digest`
 covers the whole frames of the preload block, from `preload_offset`. The table
 digest includes the stream offsets, so a bank that is compressed again does not
 match its `.fsi`.
@@ -256,14 +259,16 @@ fingerprint in the rest of the file before treating a sample as different.
 
 An FSB file holds the audio of one sample bank. It starts with a header and a
 table of rows, followed by a preload block and the streams. A version 3 bank
-can also hold a metadata block.
+stores typed, encrypted provenance immediately after the header and before
+the rows. This replaces the earlier opaque-span v3 design, which had no
+application users; banks from that experimental design are not supported.
 
 Header, 44 bytes:
 
 | Offset | Type | Field |
 | --- | --- | --- |
 | 0 | u32 | `magic`: `FSB1` (0x31425346) |
-| 4 | u32 | `version`: 3. Readers also read 2, which has no metadata span, and 1, which has the older row layout |
+| 4 | u32 | `version`: 3. Readers also read 2, which has no provenance, and 1, which has the older row layout |
 | 8 | u32 | `sample_rate`: 8000 to 384000 |
 | 12 | u32 | `channels`: 1 or 2 |
 | 16 | u32 | `preload_frames`: the preload length the bank was written with. 0xFFFFFFFF means every sample is resident in full |
@@ -272,17 +277,63 @@ Header, 44 bytes:
 | 32 | u64 | `preload_size`: size of the preload block in bytes |
 | 40 | u32 | `bps`: 16 or 24 |
 
-Version 3 metadata span, 16 bytes, after the header:
+Version 3 provenance header, 16 bytes, directly after the bank header:
 
 | Offset | Type | Field |
 | --- | --- | --- |
-| 44 | u64 | `offset`: file offset of the metadata block |
-| 52 | u64 | `size`: size of the metadata block in bytes, at most 65536 (`FSB_MAX_METADATA_SIZE`). 0 means the bank has no metadata, and then `offset` is 0 too |
+| 44 | u32 | `magic`: `FSPR` (0x52505346) |
+| 48 | u32 | `version`: 1 |
+| 52 | u32 | `record_count`: 1 to 16 |
+| 56 | u32 | `record_bytes`: 2160 |
 
-This format does not define what the metadata block holds.
+Each provenance record is 2160 bytes, starting at file offset 60:
+
+| Record offset | Type | Field |
+| --- | --- | --- |
+| 0 | u32 | `version`: 1 |
+| 4 | u32 | `algorithm`: 1, X25519 / BLAKE2b-256 / XChaCha20-Poly1305 |
+| 8 | char[32] | `key_id`: nonempty, zero-padded UTF-8 |
+| 40 | byte[32] | Fresh ephemeral X25519 public key |
+| 72 | byte[24] | Fresh nonce |
+| 96 | byte[16] | Authentication tag |
+| 112 | byte[2048] | Encrypted provenance fields |
+
+The first 96 bytes of the record are authenticated associated data. The
+session key is BLAKE2b-256 over the ASCII bytes `FSB-provenance-v1`, the raw
+X25519 shared secret, the ephemeral public key and the recipient public key,
+in that order. Reject an all-zero shared secret. Generate the 32-byte
+ephemeral secret and the 24-byte nonce using the OS CSPRNG; abort export if
+that fails. Do not reuse random test fixtures in a real writer.
+
+The decrypted fields are defined by `FSBProvenanceFields` in
+`include/fastsampler_provenance.h`: schema version, Unix creation time in UTC,
+creator application and version, OS account username and display name,
+source kind and format, source ID/name/vendor/version, optional preset and
+library names, and optional accepted disclaimer revision. Integers are
+little-endian; strings are zero-padded UTF-8. Empty optional strings mean
+unknown. Reserved bytes are zero. Names are reported values, not verified
+identities; the computer clock is not a trusted timestamp. Do not include
+full paths, hardware fingerprints, plugin licence keys or installation IDs.
+
+The default recipient is `fsb-provenance-2026-01`, whose public key is in
+`include/fastsampler_provenance_key.h`. The private key stays outside source
+control and applications, in the inspector's external key store. Key IDs
+allow an inspector to choose the matching private key after a key rotation.
+This encryption protects account names from public inspection; it does not
+authenticate the exporter, prevent spoofing/removal, or identify an uploader.
+
+A fresh export writes one record and discloses the embedded account names
+before export. No network request is needed. When rewriting a bank, preserve
+all original encrypted records byte for byte; a public writer cannot decrypt
+and re-create them. When combining banks, deduplicate their records and keep
+every distinct origin. Imported material without provenance gets a record
+for its current export; a legacy bank must not be attributed retrospectively
+to that user. Refuse an export that exceeds 16 distinct origins rather than
+silently dropping provenance. Use `fsb_provenance_append` for this operation.
 
 Version 2 and 3 row, 128 bytes, `zone_count` times after the header, and in
-version 3 after the metadata span:
+version 3 after all provenance records. Call `fsb_rows_offset(version, count)`
+using the count returned by `fsb_read_provenance`; the default is one record:
 
 | Offset | Type | Field |
 | --- | --- | --- |
@@ -321,8 +372,10 @@ A reader refuses a bank when:
 - `sample_frame_offset + total_frames` exceeds `sample_frames`, or
   `stream_first_frame` exceeds `sample_frames`.
 - A zone that needs its stream starts before `stream_first_frame`.
-- A metadata block is larger than 65536 bytes, starts before the end of the
-  rows, lies outside the file, or overlaps the preload block or a stream.
+- A version 3 bank has missing, truncated or unsupported provenance framing,
+  more than 16 records, or no records.
+- In version 3 the preload does not start immediately after the rows, or a
+  nonempty stream starts before the end of the preload.
 
 Version 1 rows are 104 bytes: `name`, then `preload_frame_offset`,
 `preload_frame_count`, `stream_offset`, `stream_size` and `total_frames`, each
@@ -330,10 +383,12 @@ a u64. Each row is its own stored sample, the preload regions follow each other
 without gaps or overlap, and the stream starts after the preload.
 `fsb_load_headers` reads every version into the version 2 row layout.
 
-A reader that does not handle metadata must not use a bank that carries it.
-`fsb_load_headers`, `fs_banks_describe` and `fs_banks_check_bank` refuse such
-a bank. Their `_with_metadata` variants also accept it and give where the
-block lies.
+`fsb_load_headers`, `fs_banks_describe` and `fs_banks_check_bank` validate the
+public provenance framing and accept a bank without decrypting its records.
+Playback never needs a private key. `fsb_read_provenance` returns a view of
+the encrypted records, valid only while the file mapping stays alive. It
+returns no records for v1/v2. An inspector calls `fsb_provenance_decrypt`
+separately and reports decryption failures without claiming authenticity.
 
 ## FSP
 
@@ -396,3 +451,6 @@ Tools.
 ## License
 
 First-party code: [MIT](LICENSE). nanopb: [zlib](3rdparty/nanopb/LICENSE.txt).
+Monocypher 4.0.2: [BSD-2-Clause or CC0](3rdparty/monocypher/LICENCE.md).
+The vendored C and header come from the official `4.0.2` release of
+[Monocypher](https://github.com/LoupVaillant/Monocypher/tree/4.0.2).

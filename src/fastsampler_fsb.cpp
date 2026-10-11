@@ -26,42 +26,37 @@ static void fsb_zone_entry_from_v1(const FSBZoneEntryV1& v1, uint32_t index, FSB
 }
 
 // =============================================================================
-// Both ranges must be inside the file, so neither end overflows.
+// Public framing can be checked without cryptographic code or a private key.
 // =============================================================================
-static bool fsb_ranges_overlap(uint64_t a, uint64_t a_size, uint64_t b, uint64_t b_size) {
-    return a_size > 0 && b_size > 0 && a < b + b_size && b < a + a_size;
-}
-
-// =============================================================================
-// A metadata block lies after the rows, inside the file, and apart from the
-// preload block and every stream.
-// =============================================================================
-static bool fsb_metadata_fits(const FSBMetadataSpan& metadata, const FSBHeader& header, const FSBZoneEntry* zones,
-                              uint64_t rows_end, uint64_t fsb_map_size) {
-    if (metadata.size == 0) return metadata.offset == 0;
-    if (metadata.size > FSB_MAX_METADATA_SIZE) return false;
-    if (metadata.offset < rows_end || metadata.offset > fsb_map_size ||
-        metadata.size > fsb_map_size - metadata.offset) {
-        return false;
+bool fsb_read_provenance(const uint8_t* view, uint64_t size, FSBProvenanceView* out) {
+    if (out) *out = {};
+    if (!view || size < sizeof(FSBHeader)) return false;
+    FSBHeader bank;
+    memcpy(&bank, view, sizeof(bank));
+    if (bank.magic != FSB_MAGIC) return false;
+    if (bank.version == FSB_VERSION_PER_ZONE || bank.version == FSB_VERSION_SHARED_SAMPLES) return true;
+    if (bank.version != FSB_VERSION || size < sizeof(bank) + sizeof(FSBProvenanceHeader)) return false;
+    FSBProvenanceHeader h;
+    memcpy(&h, view + sizeof(bank), sizeof(h));
+    if (h.magic != FSB_PROVENANCE_MAGIC || h.version != FSB_PROVENANCE_VERSION ||
+        h.record_count == 0 || h.record_count > FSB_PROVENANCE_MAX_RECORDS ||
+        h.record_bytes != sizeof(FSBProvenanceRecord) ||
+        size < fsb_rows_offset(FSB_VERSION, h.record_count)) return false;
+    auto* records = (const FSBProvenanceRecord*)(view + sizeof(bank) + sizeof(h));
+    for (uint32_t i = 0; i < h.record_count; ++i) {
+        const FSBProvenanceRecord& r = records[i];
+        if (r.version != FSB_PROVENANCE_VERSION || r.algorithm != FSB_PROVENANCE_ALGORITHM ||
+            !r.key_id[0] || !memchr(r.key_id, 0, sizeof(r.key_id))) return false;
+        uint8_t public_or = 0;
+        for (uint8_t b : r.ephemeral_public_key) public_or |= b;
+        if (!public_or) return false;
     }
-    if (fsb_ranges_overlap(metadata.offset, metadata.size, header.preload_offset, header.preload_size)) return false;
-    for (uint32_t i = 0; i < header.zone_count; ++i) {
-        if (fsb_ranges_overlap(metadata.offset, metadata.size, zones[i].stream_offset, zones[i].stream_size)) {
-            return false;
-        }
-    }
+    if (out) { out->records = records; out->count = h.record_count; }
     return true;
 }
 
-bool fsb_load_headers(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header, FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count) {
-    return fsb_load_headers_with_metadata(fsb_map_view, fsb_map_size, out_header, out_zones, max_zones,
-                                          expected_zone_count, nullptr);
-}
-
-bool fsb_load_headers_with_metadata(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header,
-                                    FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count,
-                                    FSBMetadataSpan* out_metadata) {
-    if (out_metadata) memset(out_metadata, 0, sizeof(*out_metadata));
+bool fsb_load_headers(const uint8_t* fsb_map_view, uint64_t fsb_map_size, FSBHeader* out_header,
+                       FSBZoneEntry* out_zones, uint32_t max_zones, uint32_t expected_zone_count) {
     if (!fsb_map_view || !out_header || !out_zones) return false;
     if (fsb_map_size < sizeof(FSBHeader)) return false;
 
@@ -88,15 +83,16 @@ bool fsb_load_headers_with_metadata(const uint8_t* fsb_map_view, uint64_t fsb_ma
         return false;
     }
 
-    uint64_t rows_offset = fsb_rows_offset(out_header->version);
+    FSBProvenanceView provenance{};
+    if (!fsb_read_provenance(fsb_map_view, fsb_map_size, &provenance)) return false;
+    uint64_t rows_offset = fsb_rows_offset(out_header->version, provenance.count);
     size_t entry_size = is_v1 ? sizeof(FSBZoneEntryV1) : sizeof(FSBZoneEntry);
     uint64_t rows_end = rows_offset + (uint64_t)entry_size * out_header->zone_count;
     if (fsb_map_size < rows_end) return false;
 
-    FSBMetadataSpan metadata = {};
-    if (out_header->version == FSB_VERSION) {
-        memcpy(&metadata, fsb_map_view + sizeof(FSBHeader), sizeof(metadata));
-    }
+    // v3 stores the table contiguously. This also makes its table digest
+    // cover every provenance record, so accidental removal invalidates FSI.
+    if (out_header->version == FSB_VERSION && out_header->preload_offset != rows_end) return false;
 
     const uint8_t* rows = fsb_map_view + rows_offset;
     for (uint32_t i = 0; i < out_header->zone_count; ++i) {
@@ -143,6 +139,8 @@ bool fsb_load_headers_with_metadata(const uint8_t* fsb_map_view, uint64_t fsb_ma
             (z.stream_offset + z.stream_size) < z.stream_offset) {
             return false;
         }
+        if (out_header->version == FSB_VERSION && z.stream_size &&
+            z.stream_offset < out_header->preload_offset + out_header->preload_size) return false;
 
         // =============================================================================
         // Convert the zone's stream start to the shared stream's frame
@@ -154,9 +152,6 @@ bool fsb_load_headers_with_metadata(const uint8_t* fsb_map_view, uint64_t fsb_ma
         }
     }
 
-    if (!fsb_metadata_fits(metadata, *out_header, out_zones, rows_end, fsb_map_size)) return false;
-    if (metadata.size > 0 && !out_metadata) return false;
-    if (out_metadata) *out_metadata = metadata;
     return true;
 }
 

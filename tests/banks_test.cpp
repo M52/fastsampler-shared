@@ -72,23 +72,26 @@ static std::vector<uint8_t> make_v1_bank(uint32_t rows) {
     return bank;
 }
 
-// The bank of make_bank, mono at 48 kHz, as version 3. With metadata_bytes not
-// 0, a block of that size follows the preload block.
-static std::vector<uint8_t> make_v3_bank(uint32_t rows, uint64_t metadata_bytes) {
+// The bank of make_bank with one or more inline provenance records.
+static std::vector<uint8_t> make_v3_bank(uint32_t rows, uint32_t count) {
     std::vector<uint8_t> v2 = make_bank(rows, 1, 48000, 0x44, "C3", false);
     FSBHeader h = {};
     std::memcpy(&h, v2.data(), sizeof(h));
     h.version = FSB_VERSION;
-    h.preload_offset += sizeof(FSBMetadataSpan);
-    FSBMetadataSpan span = {};
-    if (metadata_bytes) {
-        span.offset = v2.size() + sizeof(span);
-        span.size = metadata_bytes;
-    }
-    std::vector<uint8_t> bank((size_t)(v2.size() + sizeof(span) + metadata_bytes), 0x6D);
+    uint64_t extra = fsb_provenance_bytes(count);
+    h.preload_offset += extra;
+    std::vector<uint8_t> bank((size_t)(v2.size() + extra), 0);
     std::memcpy(bank.data(), &h, sizeof(h));
-    std::memcpy(bank.data() + sizeof(h), &span, sizeof(span));
-    std::memcpy(bank.data() + sizeof(h) + sizeof(span), v2.data() + sizeof(h), v2.size() - sizeof(h));
+    FSBProvenanceHeader ph = fsb_provenance_header(count);
+    std::memcpy(bank.data() + sizeof(h), &ph, sizeof(ph));
+    for (uint32_t i = 0; i < count; ++i) {
+        FSBProvenanceRecord r{};
+        r.version = FSB_PROVENANCE_VERSION; r.algorithm = FSB_PROVENANCE_ALGORITHM;
+        std::strcpy(r.key_id, FSB_PROVENANCE_KEY_ID); r.ephemeral_public_key[0] = 9;
+        r.nonce[0] = (uint8_t)i;
+        std::memcpy(bank.data() + sizeof(h) + sizeof(ph) + i * sizeof(r), &r, sizeof(r));
+    }
+    std::memcpy(bank.data() + sizeof(h) + extra, v2.data() + sizeof(h), v2.size() - sizeof(h));
     return bank;
 }
 
@@ -425,39 +428,24 @@ static int test_digests(const BankFixture* fx) {
     return 0;
 }
 
-// The table of a version 3 bank includes the metadata span, and only the
-// functions that ask for the block take a bank that carries one.
-static int test_metadata_banks() {
-    FSBHeader h = {};
-    FSBZoneEntry rows[8] = {};
-    uint32_t row = 0;
-    FsBankFacts plain_facts = {}, facts = {};
-    FSBMetadataSpan span = {7, 7};
-
-    std::vector<uint8_t> plain = make_v3_bank(2, 0);
-    CHECK(fs_banks_describe(plain.data(), plain.size(), &h, rows, 8, &plain_facts, &row) == FS_BANKS_OK);
-    CHECK(h.version == FSB_VERSION && fs_banks_table_bytes(&h) == 60 + 128 * 2);
-    CHECK(plain_facts.table_digest == fs_hash64(plain.data(), 60 + 128 * 2));
-    CHECK(fs_banks_check_bank(&plain_facts, plain.data(), plain.size(), &h, rows, 8, &row) == FS_BANKS_OK);
-    CHECK(fs_banks_check_bank_with_metadata(&plain_facts, plain.data(), plain.size(), &h, rows, 8, &row, &span) ==
-          FS_BANKS_OK);
-    CHECK(span.offset == 0 && span.size == 0);
-
-    std::vector<uint8_t> carried = make_v3_bank(2, 24);
-    CHECK(fs_banks_describe(carried.data(), carried.size(), &h, rows, 8, &facts, &row) == FS_BANKS_ERR_FILE_HEADER);
-    CHECK(fs_banks_describe_with_metadata(carried.data(), carried.size(), &h, rows, 8, &facts, &row, &span) ==
-          FS_BANKS_OK);
-    CHECK(span.size == 24 && span.offset + span.size == carried.size());
-    CHECK(facts.preload_digest == plain_facts.preload_digest && facts.table_digest != plain_facts.table_digest);
-    CHECK(fs_banks_check_bank(&facts, carried.data(), carried.size(), &h, rows, 8, &row) == FS_BANKS_ERR_FILE_HEADER);
-    CHECK(fs_banks_check_bank_with_metadata(&facts, carried.data(), carried.size(), &h, rows, 8, &row, &span) ==
-          FS_BANKS_OK);
-
-    // A cleared span changes the table digest, so the bank no longer matches
-    // its FSI.
-    std::vector<uint8_t> cleared = carried;
-    std::memset(cleared.data() + sizeof(FSBHeader), 0, sizeof(FSBMetadataSpan));
-    CHECK(fs_banks_check_bank(&facts, cleared.data(), cleared.size(), &h, rows, 8, &row) == FS_BANKS_ERR_FILE_TABLE);
+// Provenance is inside the table digest. Playback accepts its public framing
+// without a decryption key, and accidental changes fail the manifest check.
+static int test_provenance_banks() {
+    FSBHeader h{}; FSBZoneEntry rows[8]{}; uint32_t row = 0;
+    FsBankFacts facts{}, two_facts{};
+    auto carried = make_v3_bank(2, 1);
+    CHECK(fs_banks_describe(carried.data(), carried.size(), &h, rows, 8, &facts, &row) == FS_BANKS_OK);
+    CHECK(fs_banks_table_bytes(&h) == fsb_rows_offset(FSB_VERSION, 1) + 128 * 2);
+    CHECK(facts.table_digest == fs_hash64(carried.data(), (size_t)h.preload_offset));
+    CHECK(fs_banks_check_bank(&facts, carried.data(), carried.size(), &h, rows, 8, &row) == FS_BANKS_OK);
+    auto combined = make_v3_bank(2, 2);
+    CHECK(fs_banks_describe(combined.data(), combined.size(), &h, rows, 8, &two_facts, &row) == FS_BANKS_OK);
+    CHECK(two_facts.preload_digest == facts.preload_digest && two_facts.table_digest != facts.table_digest);
+    auto changed = carried;
+    changed[sizeof(FSBHeader) + sizeof(FSBProvenanceHeader) + offsetof(FSBProvenanceRecord, ciphertext)] ^= 1;
+    CHECK(fs_banks_check_bank(&facts, changed.data(), changed.size(), &h, rows, 8, &row) == FS_BANKS_ERR_FILE_TABLE);
+    auto empty = make_v3_bank(2, 0);
+    CHECK(fs_banks_describe(empty.data(), empty.size(), &h, rows, 8, &two_facts, &row) == FS_BANKS_ERR_FILE_HEADER);
     return 0;
 }
 
@@ -488,7 +476,7 @@ int main(int argc, char** argv) {
     if (!failed) failed = test_file_rules(msg, &fx);
     if (!failed) failed = test_bank_files(&fx);
     if (!failed) failed = test_digests(&fx);
-    if (!failed) failed = test_metadata_banks();
+    if (!failed) failed = test_provenance_banks();
     if (!failed) failed = test_round_trip(msg, &fx, &framed);
     std::free(msg);
     if (failed) return 1;
