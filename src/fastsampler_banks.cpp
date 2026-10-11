@@ -327,36 +327,36 @@ uint32_t fs_banks_check_bank(const FsBankFacts* expect, const uint8_t* view, uin
 
 const char* fs_banks_problem_text(uint32_t code) {
     switch (code) {
-    case FS_BANKS_OK:                  return "the sample banks have no problem";
-    case FS_BANKS_ERR_COUNT:           return "the file has too many sample banks";
-    case FS_BANKS_ERR_REVISION:        return "a file with sample banks must have mixer revision 3 or higher";
-    case FS_BANKS_ERR_SOURCE_FORMAT:   return "a file with sample banks must not give one format for all source records";
+    case FS_BANKS_OK:                  return "the sample banks are valid";
+    case FS_BANKS_ERR_COUNT:           return "the instrument has too many sample banks";
+    case FS_BANKS_ERR_REVISION:        return "the mixer data does not support sample banks";
+    case FS_BANKS_ERR_SOURCE_FORMAT:   return "the instrument file sets a sample format outside its sample banks";
     case FS_BANKS_ERR_ID:              return "a sample bank has no ID";
     case FS_BANKS_ERR_ID_TWICE:        return "two sample banks have the same ID";
-    case FS_BANKS_ERR_PATH:            return "a sample bank has no file";
-    case FS_BANKS_ERR_BUS:             return "a sample bank names an output bus that is not valid or that another bank names";
-    case FS_BANKS_ERR_FORMAT:          return "a sample bank has no valid format";
+    case FS_BANKS_ERR_PATH:            return "a sample bank has no file name";
+    case FS_BANKS_ERR_BUS:             return "a sample bank uses an invalid output bus, or one that another sample bank uses";
+    case FS_BANKS_ERR_FORMAT:          return "a sample bank has no valid sample format";
     case FS_BANKS_ERR_RATE:            return "the sample banks do not have the same sample rate";
-    case FS_BANKS_ERR_DIGEST:          return "a sample bank has no digests";
-    case FS_BANKS_ERR_ROW_COUNT:       return "a sample bank has no valid row count";
-    case FS_BANKS_ERR_ZONE_UNBOUND:    return "a zone names no bank row";
-    case FS_BANKS_ERR_ZONE_BANK:       return "a zone names a sample bank that does not exist";
-    case FS_BANKS_ERR_ZONE_ROW:        return "a zone names a bank row that does not exist";
-    case FS_BANKS_ERR_ROW_TWICE:       return "two zones name the same bank row";
-    case FS_BANKS_ERR_ROW_UNUSED:      return "a bank row belongs to no zone";
+    case FS_BANKS_ERR_DIGEST:          return "a sample bank has no checksums";
+    case FS_BANKS_ERR_ROW_COUNT:       return "a sample bank has an invalid number of samples";
+    case FS_BANKS_ERR_ZONE_UNBOUND:    return "a zone has no sample in its sample bank";
+    case FS_BANKS_ERR_ZONE_BANK:       return "a zone refers to a sample bank that does not exist";
+    case FS_BANKS_ERR_ZONE_ROW:        return "a zone refers to a sample that its sample bank does not have";
+    case FS_BANKS_ERR_ROW_TWICE:       return "two zones refer to the same sample bank entry";
+    case FS_BANKS_ERR_ROW_UNUSED:      return "a sample bank entry belongs to no zone";
     case FS_BANKS_ERR_COLLECTION:      return "the zones of one collection are in different sample banks";
-    case FS_BANKS_ERR_NEXT_ID:         return "the next bank ID is not above every bank ID";
-    case FS_BANKS_ERR_SOURCE_BANK:     return "zones of two banks use the same stored sample";
-    case FS_BANKS_ERR_SELF_PATH:       return "a file with sample banks must give its own file name as its bank";
-    case FS_BANKS_ERR_RANGE:           return "a collection names zones that do not exist, or a zone is in no collection";
-    case FS_BANKS_ERR_FILE_HEADER:     return "the bank file is not a valid sample bank";
-    case FS_BANKS_ERR_FILE_ROWS:       return "the bank file does not have the number of rows this instrument was made with";
-    case FS_BANKS_ERR_FILE_FORMAT:     return "the bank file does not have the format this instrument was made with";
-    case FS_BANKS_ERR_FILE_TABLE:      return "the bank rows are not the rows this instrument was made with";
-    case FS_BANKS_ERR_FILE_PRELOAD:    return "the bank audio is not the audio this instrument was made with";
-    case FS_BANKS_ERR_FILE_ROW_NAME:   return "a bank row has a name that is too long";
-    case FS_BANKS_ERR_FILE_ROW_SHARED: return "bank rows that share a stored sample do not agree";
-    case FS_BANKS_ERR_FILE_ROW_STREAM: return "a streamed bank row has no stream";
+    case FS_BANKS_ERR_NEXT_ID:         return "the next free sample bank ID is already in use";
+    case FS_BANKS_ERR_SOURCE_BANK:     return "zones in two sample banks share the same audio";
+    case FS_BANKS_ERR_SELF_PATH:       return "the instrument file does not list its own file name";
+    case FS_BANKS_ERR_RANGE:           return "a collection refers to zones that do not exist, or a zone is in no collection";
+    case FS_BANKS_ERR_FILE_HEADER:     return "the file is not a valid sample bank";
+    case FS_BANKS_ERR_FILE_ROWS:       return "the sample bank has a different number of samples than this instrument was made with";
+    case FS_BANKS_ERR_FILE_FORMAT:     return "the sample bank has a different sample format than this instrument was made with";
+    case FS_BANKS_ERR_FILE_TABLE:      return "the sample bank lists different samples than this instrument was made with";
+    case FS_BANKS_ERR_FILE_PRELOAD:    return "the sample bank has different audio than this instrument was made with";
+    case FS_BANKS_ERR_FILE_ROW_NAME:   return "a sample name in the sample bank is too long";
+    case FS_BANKS_ERR_FILE_ROW_SHARED: return "zones that share audio in the sample bank do not match";
+    case FS_BANKS_ERR_FILE_ROW_STREAM: return "a streamed sample has no stream data";
     default:                           return "the sample banks are not valid";
     }
 }

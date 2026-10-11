@@ -203,7 +203,7 @@ static bool write_bytes(const std::string& path, const std::vector<uint8_t>& byt
 static int test_file_rules(FSIFile* msg, const BankFixture* fx) {
     build_file(msg, fx);
     EXPECT_PROBLEM(msg, FS_BANKS_OK, N, N, N, N);
-    CHECK(std::strcmp(fs_banks_problem_text(FS_BANKS_ERR_ROW_TWICE), "two zones name the same bank row") == 0);
+    CHECK(std::strcmp(fs_banks_problem_text(FS_BANKS_ERR_ROW_TWICE), "two zones refer to the same sample bank entry") == 0);
     CHECK(std::strcmp(fs_banks_problem_text(999), "the sample banks are not valid") == 0);
 
     // Every zone reaches its row through the checked bank, including the
