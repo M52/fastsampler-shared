@@ -113,6 +113,40 @@ int main() {
     CHECK(pb_decode(&fx_in, FSIInstrumentFX_fields, &restored));
     CHECK(!restored.has_chorus_enabled && !restored.has_delay_enabled);
     CHECK(restored.chorus_params_count == 0 && restored.delay_params_count == 0);
+
+    static_assert(COLLECTION_FX_SV_NOTCH == 29 && COLLECTION_FX_STUTTER == 37 &&
+                  COLLECTION_FX_TYPE_COUNT == 38, "Persisted IDs must not move");
+    static_assert(BUS_FX_NOTCH == 11 && BUS_FX_COMPRESSOR == 19 && BUS_FX_STUTTER == 20 &&
+                  BUS_FX_TYPE_COUNT == 21, "Persisted IDs must not move");
+    static_assert(DELAY_SYNC == 5 && DELAY_NOTE == 6 && DELAY_PARAM_COUNT == 7, "Parameter slots must not move");
+    static_assert(COMPRESSOR_PARAM_COUNT <= MAX_BFX_PARAMS && DELAY_PARAM_COUNT <= MAX_BFX_PARAMS,
+                  "Bus inserts store at most MAX_BFX_PARAMS parameters");
+    FSIInstrumentFX more = FSIInstrumentFX_init_zero;
+    more.has_delay_enabled = more.delay_enabled = true;
+    more.delay_params_count = DELAY_PARAM_COUNT;
+    more.delay_params[DELAY_SYNC] = 1.0f;
+    more.delay_params[DELAY_NOTE] = 13.0f;
+    more.has_reverb_enabled = more.reverb_enabled = true;
+    more.reverb_params_count = REVERB_PARAM_COUNT;
+    more.reverb_params[REVERB_WIDTH] = 0.25f;
+    more.has_compressor_enabled = more.compressor_enabled = true;
+    more.compressor_params_count = COMPRESSOR_PARAM_COUNT;
+    more.compressor_params[COMPRESSOR_AUTO_BYPASS] = 1.0f;
+    more.has_stutter_enabled = true;
+    more.stutter_params_count = STUTTER_PARAM_COUNT;
+    more.stutter_params[STUTTER_MIX] = 0.5f;
+    unsigned char more_wire[512]{};
+    pb_ostream_t more_out = pb_ostream_from_buffer(more_wire, sizeof(more_wire));
+    CHECK(pb_encode(&more_out, FSIInstrumentFX_fields, &more));
+    FSIInstrumentFX more_back = FSIInstrumentFX_init_default;
+    pb_istream_t more_in = pb_istream_from_buffer(more_wire, more_out.bytes_written);
+    CHECK(pb_decode(&more_in, FSIInstrumentFX_fields, &more_back));
+    CHECK(more_back.delay_params_count == DELAY_PARAM_COUNT && more_back.delay_params[DELAY_NOTE] == 13.0f);
+    CHECK(more_back.reverb_enabled && more_back.reverb_params[REVERB_WIDTH] == 0.25f);
+    CHECK(more_back.compressor_params_count == COMPRESSOR_PARAM_COUNT &&
+          more_back.compressor_params[COMPRESSOR_AUTO_BYPASS] == 1.0f);
+    CHECK(more_back.has_stutter_enabled && !more_back.stutter_enabled && more_back.stutter_params[STUTTER_MIX] == 0.5f);
+    CHECK(!more_back.has_notch_enabled && more_back.notch_params_count == 0);
     // An independently specified wire fixture protects field numbers and types.
     unsigned char wire[] = {0x0a, 1, 'x', 0x12, 5, 'x', '.', 'f', 's', 'b'};
     auto message = std::make_unique<FSIFile>();
@@ -258,7 +292,6 @@ int main() {
     CHECK(fill_largest(FSICollection_fields, &big_collection));
     CHECK(pb_get_encoded_size(&largest, FSICollection_fields, &big_collection) &&
           largest == (size_t)FSICollection_size);
-
     CHECK(COLLECTION_FX_ROUND_ROBIN == 3 && COLLECTION_FX_LEGATO == 8);
     CHECK(COLLECTION_FX_ROUTER == 18 && COLLECTION_FX_PANNER == 23);
     CHECK(CFX_LEGATO_PARAM_COUNT == 27 && COLLECTION_FLAG_REFERENCED == 8);

@@ -31,7 +31,17 @@ FSIInstrumentFX.lfo_rate        max_count:4
 FSIInstrumentFX.lfo_depth       max_count:4
 FSIInstrumentFX.lfo_curve       max_count:512
 FSIInstrumentFX.chorus_params   max_count:3
-FSIInstrumentFX.delay_params    max_count:5
+FSIInstrumentFX.delay_params    max_count:7
+FSIInstrumentFX.notch_params    max_count:2
+FSIInstrumentFX.reverb_params   max_count:5
+FSIInstrumentFX.phaser_params   max_count:5
+FSIInstrumentFX.pitch_shift_params max_count:2
+FSIInstrumentFX.wave_folder_params max_count:2
+FSIInstrumentFX.wave_shaper_params max_count:4
+FSIInstrumentFX.stereo_simulator_params max_count:5
+FSIInstrumentFX.bit_crusher_params max_count:3
+FSIInstrumentFX.compressor_params max_count:7
+FSIInstrumentFX.stutter_params  max_count:2
 
 FSIModulator.curve_indices      max_count:4
 FSIModulator.params             max_count:16

@@ -335,6 +335,26 @@ message FSIInstrumentFX {
     repeated float chorus_params = 45;
     optional bool delay_enabled = 46;
     repeated float delay_params = 47;
+    optional bool notch_enabled = 48;
+    repeated float notch_params = 49;
+    optional bool reverb_enabled = 50;
+    repeated float reverb_params = 51;
+    optional bool phaser_enabled = 52;
+    repeated float phaser_params = 53;
+    optional bool pitch_shift_enabled = 54;
+    repeated float pitch_shift_params = 55;
+    optional bool wave_folder_enabled = 56;
+    repeated float wave_folder_params = 57;
+    optional bool wave_shaper_enabled = 58;
+    repeated float wave_shaper_params = 59;
+    optional bool stereo_simulator_enabled = 60;
+    repeated float stereo_simulator_params = 61;
+    optional bool bit_crusher_enabled = 62;
+    repeated float bit_crusher_params = 63;
+    optional bool compressor_enabled = 64;
+    repeated float compressor_params = 65;
+    optional bool stutter_enabled = 66;
+    repeated float stutter_params = 67;
 }
 
 message FSIModulator {

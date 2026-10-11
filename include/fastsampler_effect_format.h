@@ -35,7 +35,16 @@ enum CollectionFXType {
     COLLECTION_FX_SMART_RELEASE = 25,
     COLLECTION_FX_SIMULATED_LEGATO = 26,
     COLLECTION_FX_CHORUS = 27,
-    COLLECTION_FX_DELAY = 28
+    COLLECTION_FX_DELAY = 28,
+    COLLECTION_FX_SV_NOTCH = 29,
+    COLLECTION_FX_REVERB = 30,
+    COLLECTION_FX_PHASER = 31,
+    COLLECTION_FX_PITCH_SHIFT = 32,
+    COLLECTION_FX_WAVE_FOLDER = 33,
+    COLLECTION_FX_WAVE_SHAPER = 34,
+    COLLECTION_FX_STEREO_SIMULATOR = 35,
+    COLLECTION_FX_BIT_CRUSHER = 36,
+    COLLECTION_FX_STUTTER = 37
 };
 
 enum CFX_GainParams {
@@ -378,17 +387,96 @@ enum BusFXType {
     BUS_FX_BP2 = 7,
     BUS_FX_PEAK = 8,
     BUS_FX_LOW_SHELF = 9,
-    BUS_FX_HIGH_SHELF = 10
+    BUS_FX_HIGH_SHELF = 10,
+    BUS_FX_NOTCH = 11,
+    BUS_FX_REVERB = 12,
+    BUS_FX_PHASER = 13,
+    BUS_FX_PITCH_SHIFT = 14,
+    BUS_FX_WAVE_FOLDER = 15,
+    BUS_FX_WAVE_SHAPER = 16,
+    BUS_FX_STEREO_SIMULATOR = 17,
+    BUS_FX_BIT_CRUSHER = 18,
+    BUS_FX_COMPRESSOR = 19,
+    BUS_FX_STUTTER = 20
 };
 
 // Bus and instrument parameters start at zero. Collection parameters use
 // these same slots plus one, after Strength. Time and stereo offset are seconds.
 enum ChorusParams { CHORUS_MIX = 0, CHORUS_DEPTH = 1, CHORUS_RATE = 2, CHORUS_PARAM_COUNT = 3 };
+
+// =============================================================================
+// With Sync on, the delay follows the tempo: Note is an index into the note
+// values from a 1/64 triplet to five bars, and Time is not read.
+// =============================================================================
 enum DelayParams {
     DELAY_TIME = 0, DELAY_FEEDBACK = 1, DELAY_WET = 2,
-    DELAY_STEREO_OFFSET = 3, DELAY_CUTOFF = 4, DELAY_PARAM_COUNT = 5
+    DELAY_STEREO_OFFSET = 3, DELAY_CUTOFF = 4,
+    DELAY_SYNC = 5, DELAY_NOTE = 6, DELAY_PARAM_COUNT = 7
 };
 enum BFX_FilterParams { BFX_FILTER_FREQUENCY = 0, BFX_FILTER_Q = 1, BFX_FILTER_GAIN_DB = 2 };
+
+// =============================================================================
+// The collection notch uses the filter slots, cutoff and resonance, which are
+// these plus one.
+// =============================================================================
+enum NotchParams { NOTCH_FREQUENCY = 0, NOTCH_Q = 1, NOTCH_PARAM_COUNT = 2 };
+
+// =============================================================================
+// Room size, damping, wet, dry and width run from 0 to 1.
+// =============================================================================
+enum ReverbParams {
+    REVERB_ROOM_SIZE = 0, REVERB_DAMPING = 1, REVERB_WET = 2,
+    REVERB_DRY = 3, REVERB_WIDTH = 4, REVERB_PARAM_COUNT = 5
+};
+
+// =============================================================================
+// Rate and centre are in Hz, feedback runs from -1 to 1.
+// =============================================================================
+enum PhaserParams {
+    PHASER_MIX = 0, PHASER_DEPTH = 1, PHASER_RATE = 2,
+    PHASER_CENTER = 3, PHASER_FEEDBACK = 4, PHASER_PARAM_COUNT = 5
+};
+
+enum PitchShiftParams { PITCH_SHIFT_SEMITONES = 0, PITCH_SHIFT_MIX = 1, PITCH_SHIFT_PARAM_COUNT = 2 };
+
+enum WaveFolderParams { WAVE_FOLDER_DRIVE = 0, WAVE_FOLDER_THRESHOLD = 1, WAVE_FOLDER_PARAM_COUNT = 2 };
+
+// =============================================================================
+// Output is a linear gain. High quality is a switch, 0 or 1.
+// =============================================================================
+enum WaveShaperParams {
+    WAVE_SHAPER_DRIVE = 0, WAVE_SHAPER_BOOST = 1, WAVE_SHAPER_OUTPUT = 2,
+    WAVE_SHAPER_HIGH_QUALITY = 3, WAVE_SHAPER_PARAM_COUNT = 4
+};
+
+// =============================================================================
+// The algorithm is stored by number. Delay is in seconds; rate and depth
+// apply to double tracking only.
+// =============================================================================
+enum StereoSimulatorParams {
+    STEREO_SIM_ALGORITHM = 0, STEREO_SIM_WIDTH = 1, STEREO_SIM_DELAY = 2,
+    STEREO_SIM_RATE = 3, STEREO_SIM_DEPTH = 4, STEREO_SIM_PARAM_COUNT = 5
+};
+enum StereoSimAlgorithm { STEREO_SIM_LAURIDSEN = 0, STEREO_SIM_SCHROEDER = 1, STEREO_SIM_ADT = 2 };
+
+enum BitCrusherParams {
+    BIT_CRUSHER_BITS = 0, BIT_CRUSHER_DOWNSAMPLE = 1, BIT_CRUSHER_MIX = 2, BIT_CRUSHER_PARAM_COUNT = 3
+};
+
+// =============================================================================
+// The bus and instrument compressor. Levels are in dB, times in milliseconds,
+// auto bypass is a switch. The collection compressor has its own layout.
+// =============================================================================
+enum CompressorParams {
+    COMPRESSOR_THRESHOLD = 0, COMPRESSOR_RATIO = 1, COMPRESSOR_ATTACK = 2,
+    COMPRESSOR_RELEASE = 3, COMPRESSOR_INPUT_GAIN = 4, COMPRESSOR_OUTPUT_GAIN = 5,
+    COMPRESSOR_AUTO_BYPASS = 6, COMPRESSOR_PARAM_COUNT = 7
+};
+
+enum StutterParams { STUTTER_AMOUNT = 0, STUTTER_MIX = 1, STUTTER_PARAM_COUNT = 2 };
+
+#define DELAY_NOTE_COUNT 25
+#define STEREO_SIM_ALGORITHM_COUNT 3
 
 enum BFX_GainParams {
     BFX_GAIN_LEVEL_DB = 0,
@@ -401,7 +489,7 @@ enum BFX_GainParams {
 
 #define MAX_FX_PARAMS           32
 
-#define COLLECTION_FX_TYPE_COUNT 29
+#define COLLECTION_FX_TYPE_COUNT 38
 
 #define CFX_STRENGTH 0
 
@@ -463,4 +551,4 @@ enum BFX_GainParams {
 
 #define MAX_BFX_PARAMS 8
 
-#define BUS_FX_TYPE_COUNT 11
+#define BUS_FX_TYPE_COUNT 21
