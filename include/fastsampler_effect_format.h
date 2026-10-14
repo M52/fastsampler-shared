@@ -44,7 +44,8 @@ enum CollectionFXType {
     COLLECTION_FX_WAVE_SHAPER = 34,
     COLLECTION_FX_STEREO_SIMULATOR = 35,
     COLLECTION_FX_BIT_CRUSHER = 36,
-    COLLECTION_FX_STUTTER = 37
+    COLLECTION_FX_STUTTER = 37,
+    COLLECTION_FX_SIPS_LEGATO = 38
 };
 
 enum CFX_GainParams {
@@ -266,6 +267,61 @@ enum SimLegatoRepeat {
 enum SimLegatoSampledPolicy {
     SIMLEG_SAMPLED_ALWAYS_SIMULATE = 0,
     SIMLEG_SAMPLED_FILL_MISSING    = 1
+};
+
+// =============================================================================
+// SIPS legato: monophonic legato with portamento. A key
+// played over the held one plays its sustain from an offset into the sample;
+// the two notes crossfade over XTime and bend toward each other over BTime by
+// MinBend cents at a semitone, Octave times that at an octave. Portamento
+// glides through chromatic notes, two at a time. Times are milliseconds, fades
+// and PBend are percent, keys are MIDI notes. The enumerated values are stored.
+// =============================================================================
+enum CFX_SipsLegatoParams {
+    CFX_SIPS_MODE           = 1,
+    CFX_SIPS_XTIME_MS       = 2,
+    CFX_SIPS_ATK_FADE       = 3,
+    CFX_SIPS_NODE_VOL       = 4,
+    CFX_SIPS_RLS_FADE       = 5,
+    CFX_SIPS_RLS_MODE       = 6,
+    CFX_SIPS_BTIME_MS       = 7,
+    CFX_SIPS_MIN_BEND       = 8,
+    CFX_SIPS_OCTAVE         = 9,
+    CFX_SIPS_OFFSET_MODE    = 10,
+    CFX_SIPS_LEG_OFFSET_MS  = 11,
+    // =============================================================================
+    // PTime is the script's own figure: each glide step waits 0.5 ms plus
+    // PTime microseconds.
+    // =============================================================================
+    CFX_SIPS_PTIME          = 12,
+    CFX_SIPS_PORT_OFFSET_MS = 13,
+    CFX_SIPS_PBEND          = 14,
+    CFX_SIPS_LOW_KEY        = 15,
+    CFX_SIPS_HIGH_KEY       = 16,
+    CFX_SIPS_PEDAL          = 17
+};
+
+// =============================================================================
+// Ordered so that a controller moves the mode as the script's did: 0 is off,
+// the bottom half Solo, the top half Legato, and 127 Portamento.
+// =============================================================================
+enum SipsMode {
+    SIPS_MODE_OFF        = 0,
+    SIPS_MODE_SOLO       = 1,
+    SIPS_MODE_LEGATO     = 2,
+    SIPS_MODE_PORTAMENTO = 3
+};
+
+enum SipsReleaseMode {
+    SIPS_RLS_KNOB     = 0,
+    SIPS_RLS_KEY_LIFT = 1
+};
+
+enum SipsOffsetMode {
+    SIPS_OFFSET_AUTO_PRIOR  = 0,
+    SIPS_OFFSET_AUTO_PHRASE = 1,
+    SIPS_OFFSET_KNOB        = 2,
+    SIPS_OFFSET_KNOB_RANDOM = 3
 };
 
 enum CollectionFXDriverSource {
@@ -497,7 +553,7 @@ enum BFX_GainParams {
 
 #define MAX_FX_PARAMS           32
 
-#define COLLECTION_FX_TYPE_COUNT 38
+#define COLLECTION_FX_TYPE_COUNT 39
 
 #define CFX_STRENGTH 0
 
@@ -518,6 +574,12 @@ enum BFX_GainParams {
 #define SIMLEG_STYLE_COUNT          3
 #define SIMLEG_REPEAT_COUNT         3
 #define SIMLEG_SAMPLED_POLICY_COUNT 2
+
+#define CFX_SIPS_LEGATO_PARAM_COUNT (CFX_SIPS_PEDAL + 1)
+
+#define SIPS_MODE_COUNT         4
+#define SIPS_RLS_MODE_COUNT     2
+#define SIPS_OFFSET_MODE_COUNT  4
 
 #define SREL_MAX_MATCH_DB      60.0f
 

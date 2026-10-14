@@ -115,7 +115,11 @@ int main() {
     CHECK(restored.chorus_params_count == 0 && restored.delay_params_count == 0);
 
     static_assert(COLLECTION_FX_SV_NOTCH == 29 && COLLECTION_FX_STUTTER == 37 &&
-                  COLLECTION_FX_TYPE_COUNT == 38, "Persisted IDs must not move");
+                  COLLECTION_FX_SIPS_LEGATO == 38 && COLLECTION_FX_TYPE_COUNT == 39, "Persisted IDs must not move");
+    static_assert(CFX_SIPS_MODE == 1 && CFX_SIPS_PEDAL == 17 && CFX_SIPS_LEGATO_PARAM_COUNT == 18 &&
+                  CFX_SIPS_LEGATO_PARAM_COUNT <= MAX_FX_PARAMS, "Parameter slots must not move");
+    static_assert(SIPS_MODE_OFF == 0 && SIPS_MODE_PORTAMENTO == 3 && SIPS_OFFSET_KNOB_RANDOM == 3,
+                  "Stored values must not move");
     static_assert(BUS_FX_NOTCH == 11 && BUS_FX_COMPRESSOR == 19 && BUS_FX_STUTTER == 20,
                   "Persisted IDs must not move");
     static_assert(DELAY_SYNC == 5 && DELAY_NOTE == 6 && DELAY_PARAM_COUNT == 7, "Parameter slots must not move");
