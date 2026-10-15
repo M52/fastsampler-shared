@@ -364,6 +364,15 @@ message FSIInstrumentFX {
     repeated float stutter_params = 67;
     optional bool convolution_enabled = 68;
     repeated float convolution_params = 69;
+
+    // =============================================================================
+    // The order the output effects run in, each named by its bus effect ID.
+    // An effect left out runs after the listed ones, in the default order, and
+    // absence means the default order: shaper, folder, crusher, notch,
+    // compressor, stutter, pitch shift, chorus, phaser, stereo simulator,
+    // delay, reverb, convolution.
+    // =============================================================================
+    repeated uint32 output_fx_order = 70;
 }
 
 message FSIModulator {

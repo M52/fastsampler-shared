@@ -167,6 +167,23 @@ int main() {
     pb_istream_t conv_in = pb_istream_from_buffer(conv_wire, conv_out.bytes_written);
     CHECK(pb_decode(&conv_in, FSIInstrumentFX_fields, &conv_back));
     CHECK(conv_back.convolution_enabled && conv_back.convolution_params[CONVOLUTION_IR] == 2.0f);
+    CHECK(conv_back.output_fx_order_count == 0);
+
+    static_assert(BUS_FX_REVERB == 12 &&BUS_FX_WAVE_SHAPER == 16, "Persisted IDs must not move");
+    static_assert(sizeof(FSIInstrumentFX::output_fx_order) / sizeof(FSIInstrumentFX::output_fx_order[0]) == 13,
+                  "the order lists each of the thirteen output effects once");
+    FSIInstrumentFX order = FSIInstrumentFX_init_zero;
+    order.output_fx_order_count = 2;
+    order.output_fx_order[0] = BUS_FX_REVERB;
+    order.output_fx_order[1] = BUS_FX_WAVE_SHAPER;
+    unsigned char order_wire[64]{};
+    pb_ostream_t order_out = pb_ostream_from_buffer(order_wire, sizeof(order_wire));
+    CHECK(pb_encode(&order_out, FSIInstrumentFX_fields, &order));
+    FSIInstrumentFX order_back = FSIInstrumentFX_init_default;
+    pb_istream_t order_in = pb_istream_from_buffer(order_wire, order_out.bytes_written);
+    CHECK(pb_decode(&order_in, FSIInstrumentFX_fields, &order_back));
+    CHECK(order_back.output_fx_order_count == 2 && order_back.output_fx_order[0] == BUS_FX_REVERB &&
+          order_back.output_fx_order[1] == BUS_FX_WAVE_SHAPER);
 
     auto with_irs = std::make_unique<FSIFile>();
     std::memset(with_irs.get(), 0, sizeof(FSIFile));

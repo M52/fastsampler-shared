@@ -43,6 +43,7 @@ FSIInstrumentFX.bit_crusher_params max_count:3
 FSIInstrumentFX.compressor_params max_count:7
 FSIInstrumentFX.stutter_params  max_count:2
 FSIInstrumentFX.convolution_params max_count:2
+FSIInstrumentFX.output_fx_order max_count:13
 FSIFile.impulse_responses       max_size:260, max_count:8
 
 FSIModulator.curve_indices      max_count:4
