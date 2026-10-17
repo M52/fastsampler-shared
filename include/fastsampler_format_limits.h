@@ -13,6 +13,12 @@
 #define MAX_COLLECTION_LINKS 64
 #define COLLECTION_LINK_MAX_INTERVAL 96
 #define COLLECTION_LINK_FLAG_PEDAL_UP (1 << 1)
+// A router row with KEYBOARD_SET stores whether its rule's current state
+// limits the keys a keyboard display marks as playable: KEYBOARD set means it
+// does. Without KEYBOARD_SET a reader derives it from the condition: on when
+// the rule tests a keyswitch and no controller. Rows of one rule agree.
+#define COLLECTION_LINK_FLAG_KEYBOARD_SET (1 << 2)
+#define COLLECTION_LINK_FLAG_KEYBOARD     (1 << 3)
 #define COLLECTION_LINK_CC_NONE (-1)
 #define COLLECTION_LINK_VEL_MIN 1
 #define COLLECTION_ID_NONE 0u
