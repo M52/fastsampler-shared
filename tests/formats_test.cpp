@@ -184,6 +184,31 @@ int main() {
     CHECK(pb_decode(&order_in, FSIInstrumentFX_fields, &order_back));
     CHECK(order_back.output_fx_order_count == 2 && order_back.output_fx_order[0] == BUS_FX_REVERB &&
           order_back.output_fx_order[1] == BUS_FX_WAVE_SHAPER);
+    CHECK(!order_back.has_note_repeat_enabled && order_back.note_repeat_params_count == 0);
+
+    static_assert(NOTE_REPEAT_STOP_ON_RELEASE == 9 && NOTE_REPEAT_PATTERN_ALTERNATE == 1,
+                  "Persisted parameter slots must not move");
+    static_assert(sizeof(FSIInstrumentFX::note_repeat_params) / sizeof(FSIInstrumentFX::note_repeat_params[0]) ==
+                  NOTE_REPEAT_PARAM_COUNT, "the file holds every note repeat parameter");
+    const float repeat_defaults[NOTE_REPEAT_PARAM_COUNT] = NOTE_REPEAT_DEFAULT_PARAMS;
+    CHECK(repeat_defaults[NOTE_REPEAT_COUNT] == 1.0f && repeat_defaults[NOTE_REPEAT_NOTE] < DELAY_NOTE_COUNT);
+    FSIInstrumentFX repeat = FSIInstrumentFX_init_zero;
+    repeat.has_note_repeat_enabled = repeat.note_repeat_enabled = true;
+    repeat.note_repeat_params_count = NOTE_REPEAT_PARAM_COUNT;
+    std::memcpy(repeat.note_repeat_params, repeat_defaults, sizeof(repeat_defaults));
+    repeat.note_repeat_params[NOTE_REPEAT_WHILE_HELD] = 1.0f;
+    repeat.note_repeat_params[NOTE_REPEAT_PATTERN] = (float)NOTE_REPEAT_PATTERN_ALTERNATE;
+    unsigned char repeat_wire[96]{};
+    pb_ostream_t repeat_out = pb_ostream_from_buffer(repeat_wire, sizeof(repeat_wire));
+    CHECK(pb_encode(&repeat_out, FSIInstrumentFX_fields, &repeat));
+    FSIInstrumentFX repeat_back = FSIInstrumentFX_init_default;
+    pb_istream_t repeat_in = pb_istream_from_buffer(repeat_wire, repeat_out.bytes_written);
+    CHECK(pb_decode(&repeat_in, FSIInstrumentFX_fields, &repeat_back));
+    CHECK(repeat_back.has_note_repeat_enabled && repeat_back.note_repeat_enabled &&
+          repeat_back.note_repeat_params_count == NOTE_REPEAT_PARAM_COUNT &&
+          repeat_back.note_repeat_params[NOTE_REPEAT_WHILE_HELD] == 1.0f &&
+          repeat_back.note_repeat_params[NOTE_REPEAT_PATTERN] == (float)NOTE_REPEAT_PATTERN_ALTERNATE &&
+          repeat_back.note_repeat_params[NOTE_REPEAT_DROP] == 15.0f);
 
     auto with_irs = std::make_unique<FSIFile>();
     std::memset(with_irs.get(), 0, sizeof(FSIFile));

@@ -539,6 +539,40 @@ enum StutterParams { STUTTER_AMOUNT = 0, STUTTER_MIX = 1, STUTTER_PARAM_COUNT = 
 // =============================================================================
 enum ConvolutionParams { CONVOLUTION_MIX = 0, CONVOLUTION_IR = 1, CONVOLUTION_PARAM_COUNT = 2 };
 
+// =============================================================================
+// Note repeat, an instrument setting (FSIInstrumentFX note_repeat_params).
+// Each played note is played again after it, as complete notes.
+//   Count          repeats after the played note, 1 to NOTE_REPEAT_MAX_COUNT
+//   While held     a switch: repeats go on until the key is let go, and
+//                  Count is not read
+//   Sync           a switch: the interval is Note at the tempo, and Time is
+//                  not read
+//   Note           an index into the synced delay's note values, 0 to
+//                  DELAY_NOTE_COUNT - 1
+//   Time           the interval in milliseconds, 10 to 2000
+//   Length         the part of the interval a repeat sounds, 0.05 to 1
+//   Drop           velocity steps a repeat plays lower, 0 to 127
+//   Floor          the lowest velocity of a repeat, 1 to 127
+//   Pattern        NoteRepeatPattern
+//   Stop on release a switch: letting the key go ends its repeats
+// A parameter the file leaves out takes its value in
+// NOTE_REPEAT_DEFAULT_PARAMS: one repeat a 1/32 note later, 15 lower.
+// =============================================================================
+enum NoteRepeatParams {
+    NOTE_REPEAT_COUNT = 0, NOTE_REPEAT_WHILE_HELD = 1, NOTE_REPEAT_SYNC = 2, NOTE_REPEAT_NOTE = 3,
+    NOTE_REPEAT_TIME_MS = 4, NOTE_REPEAT_LENGTH = 5, NOTE_REPEAT_DROP = 6, NOTE_REPEAT_FLOOR = 7,
+    NOTE_REPEAT_PATTERN = 8, NOTE_REPEAT_STOP_ON_RELEASE = 9, NOTE_REPEAT_PARAM_COUNT = 10
+};
+
+// =============================================================================
+// Each lower: repeat n plays n times Drop below the played note. Alternate:
+// the odd repeats play Drop below it and the even ones at its velocity.
+// =============================================================================
+enum NoteRepeatPattern { NOTE_REPEAT_PATTERN_EACH_LOWER = 0, NOTE_REPEAT_PATTERN_ALTERNATE = 1 };
+
+#define NOTE_REPEAT_MAX_COUNT 16
+#define NOTE_REPEAT_DEFAULT_PARAMS { 1.0f, 0.0f, 1.0f, 4.0f, 60.0f, 0.5f, 15.0f, 1.0f, 0.0f, 0.0f }
+
 #define DELAY_NOTE_COUNT 25
 #define STEREO_SIM_ALGORITHM_COUNT 3
 
