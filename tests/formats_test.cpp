@@ -371,6 +371,9 @@ int main() {
     CHECK(pb_get_encoded_size(&largest, FSICollection_fields, &big_collection) &&
           largest == (size_t)FSICollection_size);
     CHECK(COLLECTION_FX_ROUND_ROBIN == 3 && COLLECTION_FX_LEGATO == 8);
+    static_assert(CFX_RR_MODE == 5 && CFX_RR_NEIGHBORS == 6 && CFX_RR_NEIGHBOR_SIDES == 8 &&
+                  CFX_RR_PARAM_COUNT <= MAX_FX_PARAMS && CFX_RR_SIDES_BOTH == 2,
+                  "Round robin parameter slots must not move");
     CHECK(COLLECTION_FX_ROUTER == 18 && COLLECTION_FX_PANNER == 23);
     CHECK(CFX_LEGATO_PARAM_COUNT == 27 && COLLECTION_FLAG_REFERENCED == 8);
     CHECK(sizeof(SMFPHeader) == 80 && sizeof(SMFPZoneEntry) == 408);

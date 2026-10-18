@@ -72,12 +72,32 @@ enum CFX_ParametricEQParams {
     CFX_EQ_HIGH_SHAPE = 12
 };
 
+// =============================================================================
+// Neighbors is a switch: the cycle runs once more for each side borrowed, and
+// on those runs the collection plays, at the played pitch, the sample of the
+// key Distance semitones above or below (CFX_RR_NeighborSides); it plays its
+// own where it has none there. Release samples keep the plain cycle.
+// =============================================================================
 enum CFX_RoundRobinParams {
     CFX_RR_START = 1,
     CFX_RR_END = 2,
     CFX_RR_ACTIVATE_STEP = 3,
     CFX_RR_GLOBAL_COUNTER = 4,
-    CFX_RR_MODE = 5
+    CFX_RR_MODE = 5,
+    CFX_RR_NEIGHBORS = 6,
+    CFX_RR_NEIGHBOR_DISTANCE = 7,
+    CFX_RR_NEIGHBOR_SIDES = 8,
+    CFX_RR_PARAM_COUNT = 9
+};
+
+// =============================================================================
+// Above and below borrows the key above on the second run of the cycle and the
+// key below on the third.
+// =============================================================================
+enum CFX_RR_NeighborSides {
+    CFX_RR_SIDES_ABOVE = 0,
+    CFX_RR_SIDES_BELOW = 1,
+    CFX_RR_SIDES_BOTH = 2
 };
 
 enum CFX_SpectralMorphParams {
