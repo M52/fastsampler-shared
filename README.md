@@ -396,6 +396,11 @@ An FSP file caches the waveform peaks of the zones of one FSI file. Each
 `FSPZone` holds 1024 (`ZONE_PEAK_CACHE_POINTS`) minimum and 1024 maximum
 values, and the zones are in the file order of the FSI zones.
 
+`fsp_pb_read` decodes every zone. A reader that needs one zone at a time calls
+`fsp_pb_index`, which reads only the record headers, and then
+`fsp_pb_read_zone` for each zone it shows. `fsp_pb_write_zones` asks for the
+peaks of one zone at a time and writes the bytes that `fsp_pb_write` writes.
+
 ## SMFP
 
 An SMFP file holds the spectral fingerprints of the zones of one collection.

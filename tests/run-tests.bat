@@ -18,6 +18,8 @@ set "FLAGS=/nologo /W4 /wd4100 /O2 /MT /EHsc /std:c++17 /DPB_FIELD_32BIT /D_CRT_
 set "BINDINGS=include\fastsampler.pb.c 3rdparty\nanopb\pb_common.c 3rdparty\nanopb\pb_encode.c 3rdparty\nanopb\pb_decode.c"
 cl %FLAGS% tests\formats_test.cpp src\fastsampler_fsb.cpp src\fastsampler_smfp.cpp src\fastsampler_fsp.cpp %BINDINGS% /Fo"build/" /Fe"build/formats_test.exe"
 if errorlevel 1 exit /b 1
+cl %FLAGS% tests\fsp_test.cpp src\fastsampler_fsp.cpp %BINDINGS% /Fo"build/" /Fe"build/fsp_test.exe"
+if errorlevel 1 exit /b 1
 cl %FLAGS% tests\source_test.cpp src\fastsampler_hash.cpp src\fastsampler_source.cpp %BINDINGS% /Fo"build/" /Fe"build/source_test.exe"
 if errorlevel 1 exit /b 1
 cl %FLAGS% tests\smfp_analysis_test.cpp src\fastsampler_smfp.cpp src\fastsampler_smfp_analysis.cpp /Fo"build/" /Fe"build/smfp_analysis_test.exe"
@@ -28,6 +30,8 @@ cl %FLAGS% tests\provenance_test.cpp src\fastsampler_provenance.cpp 3rdparty\mon
 if errorlevel 1 exit /b 1
 pushd build
 .\formats_test.exe
+if errorlevel 1 goto failed
+.\fsp_test.exe
 if errorlevel 1 goto failed
 .\source_test.exe
 if errorlevel 1 goto failed
