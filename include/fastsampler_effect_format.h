@@ -45,7 +45,9 @@ enum CollectionFXType {
     COLLECTION_FX_STEREO_SIMULATOR = 35,
     COLLECTION_FX_BIT_CRUSHER = 36,
     COLLECTION_FX_STUTTER = 37,
-    COLLECTION_FX_SIPS_LEGATO = 38
+    COLLECTION_FX_SIPS_LEGATO = 38,
+    COLLECTION_FX_CSS_LEGATO = 39,
+    COLLECTION_FX_CSS_MEAS_TREM = 40
 };
 
 enum CFX_GainParams {
@@ -344,6 +346,65 @@ enum SipsOffsetMode {
     SIPS_OFFSET_KNOB_RANDOM = 3
 };
 
+// =============================================================================
+// CSS legato: the sustain legato of Cinematic Studio Strings. Every
+// collection of one patch carries the effect with its role. The bodies
+// sustain the notes. The transitions are recorded note-to-note connections:
+// the key is the lower note, and the velocity is the interval (1 to 12 up,
+// 13 to 24 down). The repetitions are keyed per note, with velocity 1 to 3.
+// The key velocity picks the speed only. Velocities are MIDI values, the
+// controller is a controller number, and the enumerated values are stored.
+// =============================================================================
+enum CFX_CssLegatoParams {
+    CFX_CSSL_ROLE          = 1,
+    CFX_CSSL_MODE          = 2,
+    CFX_CSSL_LEGATO        = 3,
+    CFX_CSSL_PEDAL         = 4,
+    CFX_CSSL_MEDIUM_VEL    = 5,
+    CFX_CSSL_FAST_VEL      = 6,
+    CFX_CSSL_PORT_CC       = 7,
+    CFX_CSSL_PORT_VEL      = 8,
+    CFX_CSSL_GROUP         = 9
+};
+
+enum CssLegatoRole {
+    CSSL_ROLE_BODY_VIB   = 0,
+    CSSL_ROLE_BODY_NV    = 1,
+    CSSL_ROLE_LEGATO     = 2,
+    CSSL_ROLE_REPEAT     = 3,
+    CSSL_ROLE_PORTAMENTO = 4
+};
+
+enum CssLegatoMode {
+    CSSL_MODE_LOW_LATENCY = 0,
+    CSSL_MODE_EXPRESSIVE  = 1
+};
+
+// =============================================================================
+// CSS measured tremolo: each played note is heard twice. A collection plays
+// in the first hit (at the key), the second (a sixteenth later, at a scaled
+// velocity, whether or not the key is still down) or both, at a gain of its
+// own for each. Offsets steps the start of each note through the script's
+// seven sample offsets.
+// =============================================================================
+enum CFX_CssMeasTremParams {
+    CFX_CSSMT_HIT        = 1,
+    CFX_CSSMT_FIRST_DB   = 2,
+    CFX_CSSMT_SECOND_DB  = 3,
+    CFX_CSSMT_SYNC       = 4,
+    CFX_CSSMT_BPM        = 5,
+    CFX_CSSMT_VEL_PCT    = 6,
+    CFX_CSSMT_VEL_ADD    = 7,
+    CFX_CSSMT_OFFSETS    = 8,
+    CFX_CSSMT_RELEASE_MS = 9
+};
+
+enum CssMeasTremHit {
+    CSSMT_HIT_FIRST  = 0,
+    CSSMT_HIT_SECOND = 1,
+    CSSMT_HIT_BOTH   = 2
+};
+
 enum CollectionFXDriverSource {
     FX_DRIVER_SOURCE_CC       = 0,
     FX_DRIVER_SOURCE_VELOCITY = 1,
@@ -607,7 +668,7 @@ enum BFX_GainParams {
 
 #define MAX_FX_PARAMS           32
 
-#define COLLECTION_FX_TYPE_COUNT 39
+#define COLLECTION_FX_TYPE_COUNT 41
 
 #define CFX_STRENGTH 0
 
@@ -634,6 +695,16 @@ enum BFX_GainParams {
 #define SIPS_MODE_COUNT         4
 #define SIPS_RLS_MODE_COUNT     2
 #define SIPS_OFFSET_MODE_COUNT  4
+
+#define CFX_CSS_LEGATO_PARAM_COUNT (CFX_CSSL_GROUP + 1)
+
+#define CSSL_ROLE_COUNT  5
+#define CSSL_MODE_COUNT  2
+#define CSSL_GROUP_COUNT 4
+
+#define CFX_CSS_MEAS_TREM_PARAM_COUNT (CFX_CSSMT_RELEASE_MS + 1)
+
+#define CSSMT_HIT_COUNT 3
 
 #define SREL_MAX_MATCH_DB      60.0f
 
