@@ -23,7 +23,7 @@ static_assert(FSI_MAX_BANKS == sizeof(((FSIFile*)0)->banks) / sizeof(FSIBank),
 static_assert(FSI_MAX_BANKS < FSI_BANK_BUS_NONE, "a bank bus must never be FSI_BANK_BUS_NONE");
 static_assert(FSI_MAX_BANKS <= 32, "the bus mask has 32 bits");
 static_assert(FSI_MAX_BANKS < 0xFF, "the stored-sample table marks an unused sample with 0xFF");
-static_assert(FS_BANKS_MAX_ROWS < 0xFFFF, "the first-row table marks an unused sample with 0xFFFF");
+static_assert(FS_BANKS_MAX_ROWS <= 0x10000, "the first-row table holds a row index in 16 bits");
 static_assert(FSI_MIXER_REVISION_BANKS > FSI_MIXER_REVISION, "readers of the legacy revision must refuse banks");
 static_assert(FSI_MIXER_REVISION_NEWEST >= FSI_MIXER_REVISION_BANKS, "this release reads files with banks");
 
@@ -191,9 +191,7 @@ uint32_t fs_banks_check_file(const FSIFile* msg, FsBanksProblem* out) {
     // use it. A reference out of range is left to the reader, which drops it.
     // =============================================================================
     uint32_t sample_count = fs_banks_min(msg->source_samples_count, FS_BANKS_SAMPLE_CAPACITY);
-    uint8_t sample_bank[FS_BANKS_MAX_ROWS];
-    static_assert(sizeof(sample_bank) >= sizeof(((FSIFile*)0)->source_samples) / sizeof(FSISourceSample),
-                  "one entry per stored sample");
+    uint8_t sample_bank[sizeof(((FSIFile*)0)->source_samples) / sizeof(FSISourceSample)];
     memset(sample_bank, 0xFF, sizeof(sample_bank));
     for (uint32_t z = 0; z < zone_count; ++z) {
         const FSIZone& zone = msg->zones[z];
@@ -261,25 +259,29 @@ uint32_t fs_banks_check_rows(const FSBHeader* header, const FSBZoneEntry* rows, 
     if (count > FS_BANKS_MAX_ROWS) return FS_BANKS_ERR_FILE_ROWS;
 
     // =============================================================================
-    // first holds the first row of each stored sample. fsb_load_headers makes
-    // sure that every sample_index is below the row count.
+    // first holds the first row of each stored sample that seen marks.
+    // fsb_load_headers makes sure that every sample_index is below the row
+    // count. The two tables take 136 KiB of stack.
     // =============================================================================
     uint16_t first[FS_BANKS_MAX_ROWS];
-    for (uint32_t i = 0; i < count; ++i) first[i] = 0xFFFF;
+    uint8_t seen[FS_BANKS_MAX_ROWS / 8];
+    memset(seen, 0, sizeof(seen));
     for (uint32_t i = 0; i < count; ++i) {
         const FSBZoneEntry& r = rows[i];
         *out_row = i;
         if (!memchr(r.name, 0, sizeof(r.name))) return FS_BANKS_ERR_FILE_ROW_NAME;
         if (r.preload_frame_count < r.total_frames && r.stream_size == 0) return FS_BANKS_ERR_FILE_ROW_STREAM;
         if (r.sample_index >= count) return FS_BANKS_ERR_FILE_HEADER;
-        uint16_t f = first[r.sample_index];
-        if (f != 0xFFFF) {
-            const FSBZoneEntry& s = rows[f];
+        uint8_t& seen_byte = seen[r.sample_index >> 3];
+        uint8_t seen_bit = (uint8_t)(1u << (r.sample_index & 7u));
+        if (seen_byte & seen_bit) {
+            const FSBZoneEntry& s = rows[first[r.sample_index]];
             if (r.sample_frames != s.sample_frames || r.stream_offset != s.stream_offset ||
                 r.stream_size != s.stream_size || r.stream_first_frame != s.stream_first_frame)
                 return FS_BANKS_ERR_FILE_ROW_SHARED;
         } else {
             first[r.sample_index] = (uint16_t)i;
+            seen_byte |= seen_bit;
         }
     }
     *out_row = FS_BANKS_NONE;

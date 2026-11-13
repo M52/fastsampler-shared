@@ -18,7 +18,7 @@
 #ifndef PB_FIELD_32BIT
 #error Enable PB_FIELD_32BIT to support messages exceeding 64kB in size: FSIFile
 #endif
-PB_BIND(FSIFile, FSIFile, 4)
+PB_BIND(FSIFile, FSIFile, 8)
 
 PB_BIND(FSIBus, FSIBus, AUTO)
 

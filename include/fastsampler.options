@@ -13,7 +13,9 @@ FSIFile.collections             max_count:128
 # Keep the zone capacity at or above MAX_ZONES. The writer stores one record
 # per zone.
 # =============================================================================
-FSIFile.zones                   max_count:8192
+FSIFile.zones                   max_count:65536
+# A count of 65536 needs the 32-bit array size of the 8-word field descriptor.
+FSIFile                         descriptorsize:DS_8
 FSIFile.modulators              max_count:1024
 FSIFile.smf_fingerprints        max_count:128
 

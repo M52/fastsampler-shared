@@ -380,6 +380,93 @@ static int test_bank_files(const BankFixture* fx) {
     return 0;
 }
 
+// =============================================================================
+// A bank holds up to FS_BANKS_MAX_ROWS rows. The last row index is 65535,
+// so the first-row table must tell it from a stored sample without rows.
+// =============================================================================
+static int test_row_limit() {
+    static_assert(FS_BANKS_MAX_ROWS == 65536, "the row limit of one bank");
+    static_assert(sizeof(((FSIFile*)0)->zones) / sizeof(FSIZone) == FS_BANKS_MAX_ROWS,
+                  "one zone for each row of a full bank");
+    std::vector<FSBZoneEntry> rows(FS_BANKS_MAX_ROWS + 1);
+    FSBHeader h = {};
+    uint32_t row = 0;
+
+    for (uint32_t i = 0; i < rows.size(); ++i) {
+        rows[i].sample_index = i;
+        rows[i].sample_frames = 100;
+        rows[i].total_frames = 100;
+        rows[i].preload_frame_count = 100;
+    }
+    h.zone_count = FS_BANKS_MAX_ROWS;
+    CHECK(fs_banks_check_rows(&h, rows.data(), &row) == FS_BANKS_OK);
+    h.zone_count = FS_BANKS_MAX_ROWS + 1;
+    CHECK(fs_banks_check_rows(&h, rows.data(), &row) == FS_BANKS_ERR_FILE_ROWS);
+
+    // =============================================================================
+    // Rows 65534 and 65535 share the stored sample 65535. They agree, then
+    // they do not.
+    // =============================================================================
+    h.zone_count = FS_BANKS_MAX_ROWS;
+    rows[65534].sample_index = 65535;
+    CHECK(fs_banks_check_rows(&h, rows.data(), &row) == FS_BANKS_OK);
+    rows[65535].sample_frames = 101;
+    CHECK(fs_banks_check_rows(&h, rows.data(), &row) == FS_BANKS_ERR_FILE_ROW_SHARED && row == 65535);
+
+    // =============================================================================
+    // Row 65535 is the first row of stored sample 0, and row 0 of sample 1.
+    // No row before it uses sample 0, so nothing is compared.
+    // =============================================================================
+    rows[65535].sample_frames = 100;
+    rows[65534].sample_index = 65534;
+    rows[0].sample_index = 1;
+    rows[65535].sample_index = 0;
+    rows[65535].stream_size = 7;
+    CHECK(fs_banks_check_rows(&h, rows.data(), &row) == FS_BANKS_OK);
+    return 0;
+}
+
+// =============================================================================
+// A file with one bank of FS_BANKS_MAX_ROWS rows and as many zones passes the
+// rules, and it encodes and decodes with every zone.
+// =============================================================================
+static int test_zone_limit(FSIFile* msg, const BankFixture* fx) {
+    const uint32_t N = FS_BANKS_NONE;
+    build_file(msg, fx);
+    msg->banks_count = 1;
+    msg->banks[0].row_count = FS_BANKS_MAX_ROWS;
+    msg->zones_count = FS_BANKS_MAX_ROWS;
+    for (uint32_t z = 0; z < FS_BANKS_MAX_ROWS; ++z) {
+        FSIZone& zone = msg->zones[z];
+        zone.volume = 1.0f;
+        zone.has_bank = true; zone.bank = 0;
+        zone.has_bank_row = true; zone.bank_row = FS_BANKS_MAX_ROWS - 1 - z;
+    }
+    msg->collections_count = 1;
+    msg->collections[0].first_zone_index = 0;
+    msg->collections[0].zone_count = FS_BANKS_MAX_ROWS;
+    EXPECT_PROBLEM(msg, FS_BANKS_OK, N, N, N, N);
+
+    std::vector<uint8_t> framed;
+    CHECK(encode_framed(msg, &framed));
+    FSIFile* decoded = (FSIFile*)std::calloc(1, sizeof(FSIFile));
+    CHECK(decoded != nullptr);
+    pb_istream_t input = pb_istream_from_buffer(framed.data() + 8, framed.size() - 8);
+    bool ok = pb_decode(&input, FSIFile_fields, decoded);
+    bool same = ok && decoded->zones_count == FS_BANKS_MAX_ROWS && decoded->zones[0].bank_row == 65535 &&
+                decoded->zones[65535].bank_row == 0 && decoded->zones[65535].volume == 1.0f;
+    uint32_t code = ok ? fs_banks_check_file(decoded, nullptr) : FS_BANKS_ERR_COUNT;
+    std::free(decoded);
+    CHECK(ok && same && code == FS_BANKS_OK);
+
+    msg->zones[65535].bank_row = 1;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_ROW_TWICE, 0, 65535, 1, N);
+    msg->zones[65535].bank_row = 0;
+    msg->banks[0].row_count = FS_BANKS_MAX_ROWS + 1;
+    EXPECT_PROBLEM(msg, FS_BANKS_ERR_ROW_COUNT, 0, N, N, N);
+    return 0;
+}
+
 static int test_digests(const BankFixture* fx) {
     FSBHeader h = {};
     FSBZoneEntry rows[8] = {};
@@ -475,6 +562,8 @@ int main(int argc, char** argv) {
     int failed = describe_banks(&fx);
     if (!failed) failed = test_file_rules(msg, &fx);
     if (!failed) failed = test_bank_files(&fx);
+    if (!failed) failed = test_row_limit();
+    if (!failed) failed = test_zone_limit(msg, &fx);
     if (!failed) failed = test_digests(&fx);
     if (!failed) failed = test_provenance_banks();
     if (!failed) failed = test_round_trip(msg, &fx, &framed);

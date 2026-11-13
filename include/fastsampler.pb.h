@@ -521,7 +521,7 @@ typedef struct _FSIFile {
     pb_size_t collections_count;
     FSICollection collections[128];
     pb_size_t zones_count;
-    FSIZone zones[8192];
+    FSIZone zones[65536];
     bool has_fx;
     FSIInstrumentFX fx;
     pb_size_t modulators_count;
@@ -1232,7 +1232,7 @@ extern const pb_msgdesc_t FSPZone_msg;
 #define FSICollectionFX_size                     6844
 #define FSICollectionLink_size                   129
 #define FSICollection_size                       125
-#define FSIFile_size                             15627996
+#define FSIFile_size                             31225564
 #define FSIInstrumentFX_size                     3910
 #define FSIModulator_size                        2795
 #define FSISMFFingerprints_size                  3210
