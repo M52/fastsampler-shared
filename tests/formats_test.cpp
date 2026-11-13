@@ -116,8 +116,8 @@ int main() {
 
     static_assert(COLLECTION_FX_SV_NOTCH == 29 && COLLECTION_FX_STUTTER == 37 &&
                   COLLECTION_FX_SIPS_LEGATO == 38 && COLLECTION_FX_CSS_LEGATO == 39 &&
-                  COLLECTION_FX_CSS_MEAS_TREM == 40 &&
-                  COLLECTION_FX_TYPE_COUNT == 41, "Persisted IDs must not move");
+                  COLLECTION_FX_CSS_MEAS_TREM == 40 && COLLECTION_FX_CSW_LEGATO == 41 &&
+                  COLLECTION_FX_TYPE_COUNT == 42, "Persisted IDs must not move");
     static_assert(CFX_SIPS_MODE == 1 && CFX_SIPS_PEDAL == 17 && CFX_SIPS_LEGATO_PARAM_COUNT == 18 &&
                   CFX_SIPS_LEGATO_PARAM_COUNT <= MAX_FX_PARAMS, "Parameter slots must not move");
     static_assert(SIPS_MODE_OFF == 0 && SIPS_MODE_PORTAMENTO == 3 && SIPS_OFFSET_KNOB_RANDOM == 3,
@@ -129,6 +129,31 @@ int main() {
     static_assert(CFX_CSSMT_HIT == 1 && CFX_CSSMT_OFFSETS == 8 && CFX_CSSMT_RELEASE_MS == 9 && CFX_CSS_MEAS_TREM_PARAM_COUNT == 10 &&
                   CFX_CSS_MEAS_TREM_PARAM_COUNT <= MAX_FX_PARAMS, "Parameter slots must not move");
     static_assert(CSSMT_HIT_FIRST == 0 && CSSMT_HIT_BOTH == 2, "Stored values must not move");
+    static_assert(CFX_CSWL_ROLE == 1 && CFX_CSWL_SPIC_SOFT_DB == 34 && CFX_CSWL_WAIT_WIDE_MS == 35 &&
+                  CFX_CSWL_REP_FADE_FAST_MS == 48 && CFX_CSWL_ENV_FIRST == 51 && CFX_CSWL_TABLE_FIRST == 69 &&
+                  CFX_CSWL_ENV_FIRST + 3 * CSWL_ENV_NODE_COUNT == CFX_CSWL_TABLE_FIRST &&
+                  CFX_CSW_LEGATO_PARAM_COUNT == 103 && CFX_CSW_LEGATO_PARAM_COUNT <= MAX_FX_PARAMS,
+                  "Parameter slots must not move");
+    static_assert(CSWL_ROLE_BODY_VIB == 0 && CSWL_ROLE_MARC_RELEASE == 11 && CSWL_ROLE_COUNT == 12 &&
+                  CSWL_ARTIC_MARCATO == 1 && CSWL_MODE_EXPRESSIVE == 1 && CSWL_CC_NONE == 128,
+                  "Stored values must not move");
+    static_assert(MAX_FX_PARAMS == 128, "FSICollectionFX.params holds MAX_FX_PARAMS entries");
+    {
+        FSICollectionFX fx = FSICollectionFX_init_zero;
+        CHECK(sizeof(fx.params) / sizeof(fx.params[0]) == MAX_FX_PARAMS);
+        fx.type = COLLECTION_FX_CSW_LEGATO;
+        fx.params_count = CFX_CSW_LEGATO_PARAM_COUNT;
+        for (int p = 0; p < CFX_CSW_LEGATO_PARAM_COUNT; ++p)
+            fx.params[p] = (float)p;
+        static uint8_t fx_buf[FSICollectionFX_size];
+        pb_ostream_t fx_os = pb_ostream_from_buffer(fx_buf, sizeof(fx_buf));
+        CHECK(pb_encode(&fx_os, FSICollectionFX_fields, &fx));
+        static FSICollectionFX back;
+        back = FSICollectionFX{};
+        pb_istream_t fx_is = pb_istream_from_buffer(fx_buf, fx_os.bytes_written);
+        CHECK(pb_decode(&fx_is, FSICollectionFX_fields, &back));
+        CHECK(back.params_count == CFX_CSW_LEGATO_PARAM_COUNT && back.params[102] == 102.0f);
+    }
     static_assert(BUS_FX_NOTCH == 11 && BUS_FX_COMPRESSOR == 19 && BUS_FX_STUTTER == 20,
                   "Persisted IDs must not move");
     static_assert(DELAY_SYNC == 5 && DELAY_NOTE == 6 && DELAY_PARAM_COUNT == 7, "Parameter slots must not move");

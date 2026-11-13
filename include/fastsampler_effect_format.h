@@ -47,7 +47,8 @@ enum CollectionFXType {
     COLLECTION_FX_STUTTER = 37,
     COLLECTION_FX_SIPS_LEGATO = 38,
     COLLECTION_FX_CSS_LEGATO = 39,
-    COLLECTION_FX_CSS_MEAS_TREM = 40
+    COLLECTION_FX_CSS_MEAS_TREM = 40,
+    COLLECTION_FX_CSW_LEGATO = 41
 };
 
 enum CFX_GainParams {
@@ -405,6 +406,103 @@ enum CssMeasTremHit {
     CSSMT_HIT_BOTH   = 2
 };
 
+// =============================================================================
+// CSW legato: the sustain legato (articulation code 0) and the marcato legato
+// (code 4) of Cinematic Studio Woodwinds. Every collection of a patch carries
+// the effect with its role and group, as with CSS legato. The collections of
+// one group play one phrase; its first collection holds the settings and the
+// instrument's saved script values (slots 3 to 34). Slots 35 to 48 are the
+// collection's own layer slot of the hand-off tables %k1aqh and %wu5b4, slots
+// 49 to 68 its flex envelope, and slots 69 to 102 its 100-step table (%jygjv
+// of its layer slot for transitions, %0uf32 for releases), three entries of 0
+// to 100 to a slot as (a * 101 + b) * 101 + c. Times are milliseconds, gains
+// are dB, velocities and controllers are MIDI values, and the enumerated
+// values are stored. Controller 128 means none.
+// =============================================================================
+enum CFX_CswLegatoParams {
+    CFX_CSWL_ROLE              = 1,
+    CFX_CSWL_GROUP             = 2,
+    CFX_CSWL_ARTICULATION      = 3,
+    CFX_CSWL_MODE              = 4,
+    CFX_CSWL_LEGATO            = 5,
+    CFX_CSWL_PEDAL             = 6,
+    CFX_CSWL_MEDIUM_VEL        = 7,
+    CFX_CSWL_FAST_VEL          = 8,
+    CFX_CSWL_VIB_CC            = 9,
+    CFX_CSWL_VIB_DEFAULT       = 10,
+    CFX_CSWL_FIRST_WAIT_MS     = 11,
+    CFX_CSWL_FIRST_FADE_MS     = 12,
+    CFX_CSWL_OVERLAP_B_MS      = 13,
+    CFX_CSWL_EX_CC_B_MS        = 14,
+    CFX_CSWL_LL_CC67_C         = 15,
+    CFX_CSWL_EX_START_FAST_MS  = 16,
+    CFX_CSWL_BODY_FADE_SLOW_MS = 17,
+    CFX_CSWL_REPEAT_FADE_SLOW_MS = 18,
+    CFX_CSWL_REPEAT_FADE_MED_MS  = 19,
+    CFX_CSWL_REPEAT_FADE_FAST_MS = 20,
+    CFX_CSWL_REPEAT_VEL_VIB    = 21,
+    CFX_CSWL_REPEAT_VEL_NV     = 22,
+    CFX_CSWL_REBOW_DB          = 23,
+    CFX_CSWL_RELEASE_VIB_DB    = 24,
+    CFX_CSWL_RELEASE_NV_DB     = 25,
+    CFX_CSWL_RELEASE_MARC_DB   = 26,
+    CFX_CSWL_MARC_DB           = 27,
+    CFX_CSWL_SPICCATO          = 28,
+    CFX_CSWL_SPIC_RR           = 29,
+    CFX_CSWL_SPIC_VEL1         = 30,
+    CFX_CSWL_SPIC_VEL2         = 31,
+    CFX_CSWL_SPIC_VEL3         = 32,
+    CFX_CSWL_SPIC_LAYERS       = 33,
+    CFX_CSWL_SPIC_SOFT_DB      = 34,
+    CFX_CSWL_WAIT_WIDE_MS      = 35,
+    CFX_CSWL_WAIT_SLOW_MS      = 36,
+    CFX_CSWL_WAIT_MED_MS       = 37,
+    CFX_CSWL_WAIT_FAST_MS      = 38,
+    CFX_CSWL_FADE_WIDE_MS      = 39,
+    CFX_CSWL_FADE_SLOW_MS      = 40,
+    CFX_CSWL_FADE_MED_MS       = 41,
+    CFX_CSWL_FADE_FAST_MS      = 42,
+    CFX_CSWL_REP_WAIT_SLOW_MS  = 43,
+    CFX_CSWL_REP_WAIT_MED_MS   = 44,
+    CFX_CSWL_REP_WAIT_FAST_MS  = 45,
+    CFX_CSWL_REP_FADE_SLOW_MS  = 46,
+    CFX_CSWL_REP_FADE_MED_MS   = 47,
+    CFX_CSWL_REP_FADE_FAST_MS  = 48,
+    CFX_CSWL_ENV_NODES         = 49,
+    CFX_CSWL_ENV_SUSTAIN       = 50,
+    // =============================================================================
+    // Node n of the envelope is at CFX_CSWL_ENV_FIRST + 3 n: its time in ms,
+    // its level from 0 to 1 and its curve, for CSWL_ENV_NODE_COUNT nodes.
+    // =============================================================================
+    CFX_CSWL_ENV_FIRST         = 51,
+    CFX_CSWL_TABLE_FIRST       = 69
+};
+
+enum CswLegatoRole {
+    CSWL_ROLE_BODY_VIB      = 0,
+    CSWL_ROLE_BODY_NV       = 1,
+    CSWL_ROLE_LEGATO_VIB    = 2,
+    CSWL_ROLE_LEGATO_NV     = 3,
+    CSWL_ROLE_REPEAT_VIB    = 4,
+    CSWL_ROLE_REPEAT_NV     = 5,
+    CSWL_ROLE_RELEASE_VIB   = 6,
+    CSWL_ROLE_RELEASE_NV    = 7,
+    CSWL_ROLE_MARC_BODY     = 8,
+    CSWL_ROLE_MARC_LEGATO   = 9,
+    CSWL_ROLE_SPICCATO      = 10,
+    CSWL_ROLE_MARC_RELEASE  = 11
+};
+
+enum CswLegatoArticulation {
+    CSWL_ARTIC_SUSTAIN = 0,
+    CSWL_ARTIC_MARCATO = 1
+};
+
+enum CswLegatoMode {
+    CSWL_MODE_LOW_LATENCY = 0,
+    CSWL_MODE_EXPRESSIVE  = 1
+};
+
 enum CollectionFXDriverSource {
     FX_DRIVER_SOURCE_CC       = 0,
     FX_DRIVER_SOURCE_VELOCITY = 1,
@@ -666,9 +764,9 @@ enum BFX_GainParams {
 
 #define MAX_DRIVERS_PER_FX      8
 
-#define MAX_FX_PARAMS           32
+#define MAX_FX_PARAMS           128
 
-#define COLLECTION_FX_TYPE_COUNT 41
+#define COLLECTION_FX_TYPE_COUNT 42
 
 #define CFX_STRENGTH 0
 
@@ -705,6 +803,19 @@ enum BFX_GainParams {
 #define CFX_CSS_MEAS_TREM_PARAM_COUNT (CFX_CSSMT_RELEASE_MS + 1)
 
 #define CSSMT_HIT_COUNT 3
+
+#define CSWL_ENV_NODE_COUNT  6
+#define CSWL_TABLE_STEPS     100
+#define CSWL_TABLE_PER_PARAM 3
+#define CSWL_TABLE_BASE      101
+#define CSWL_TABLE_PARAMS    ((CSWL_TABLE_STEPS + CSWL_TABLE_PER_PARAM - 1) / CSWL_TABLE_PER_PARAM)
+#define CFX_CSW_LEGATO_PARAM_COUNT (CFX_CSWL_TABLE_FIRST + CSWL_TABLE_PARAMS)
+
+#define CSWL_ROLE_COUNT  12
+#define CSWL_ARTIC_COUNT 2
+#define CSWL_MODE_COUNT  2
+#define CSWL_GROUP_COUNT 4
+#define CSWL_CC_NONE     128
 
 #define SREL_MAX_MATCH_DB      60.0f
 

@@ -65,7 +65,7 @@ FSIFile.collection_fx               max_count:1024
 # =============================================================================
 # Keep this capacity at or above MAX_FX_PARAMS.
 # =============================================================================
-FSICollectionFX.params              max_count:32
+FSICollectionFX.params              max_count:128
 FSICollectionFX.params_i            max_count:8
 FSICollectionFX.drivers             max_count:8
 FSICollectionFXDriver.curve_data    max_count:128
